@@ -4,10 +4,6 @@ NAND is a primitive implemented at the hardware level so need to define the logi
 All subsequent gates can be expressed via increasingly complex abstractions of NAND
 """
 
-# TODO: gates can be passed function inputs that do nothing
-# TODO: test scripts?
-from abc import ABC
-
 
 class Gate(object):
     def __init__(self):
@@ -15,6 +11,12 @@ class Gate(object):
         self.a = None
         self.b = None
         self.c = None
+        self._in = None
+        self.sel = None
+        self.sel2 = None
+        self.sel3 = None
+        self._in8 = None
+        self._in16 = None
         self.a16 = None
         self.b16 = None
         self.c16 = None
@@ -23,46 +25,62 @@ class Gate(object):
         self.f16 = None
         self.g16 = None
         self.h16 = None
-        self.sel = None
-        self.sel2 = None
-        self.sel3 = None
-        self._in = None
-        self._in8 = None
+        self.zx = None
+        self.nx = None
+        self.zy = None
+        self.ny = None
+        self.f = None
+        self.no = None
 
     def evaluate(self, a=None, b=None, c=None, _in=None, sel=None, sel2=None, sel3=None, _in8=None, _in16=None,
-                 a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None):
+                 a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None,
+                 zx=None, nx=None, zy=None, ny=None, f=None, no=None):
         """
         validate input, None = uninitialized
         """
-        # TODO: can some of these tests be aggregated?
-        if a is not None:
-            if type(a) is not str:
-                a = bin(a)
-            if a not in ("0b0", "0b1"):
-                raise RuntimeError("a input must be 1 bit")
-            self.a = a
+        # test flags
+        one_bit_inputs = {"a": a, "b": b, "c": c, "_in": _in, "sel": sel,
+                          "zx": zx, "nx": nx, "zy": zy, "ny": ny, "f": f, "no": no}
+        
+        for flag in one_bit_inputs:
+            if one_bit_inputs[flag] is not None:
+                if type(one_bit_inputs[flag]) is not str:
+                    one_bit_inputs[flag] = bin(one_bit_inputs[flag])
+                if one_bit_inputs[flag] not in ("0b0", "0b1"):
+                    raise RuntimeError("%s input must be 1 bit" % flag)
+        
+        sixteen_bit_inputs = {"_in16": _in16, "a16": a16, "b16": b16, "c16": c16, "d16": d16, "e16": e16, "f16": f16,
+                              "g16": g16, "h16": h16}
 
-        if b is not None:
-            if type(b) is not str:
-                b = bin(b)
-            if b not in ("0b0", "0b1"):
-                raise RuntimeError("b input must be 1 bit")
-            self.b = b
-
-        if c is not None:
-            if type(c) is not str:
-                c = bin(c)
-            if c not in ("0b0", "0b1"):
-                raise RuntimeError("c input must be 1 bit")
-            self.c = c
-
-        if sel is not None:
-            if type(sel) is not str:
-                sel = bin(sel)
-            if sel not in ("0b0", "0b1"):
-                raise RuntimeError("sel input must be 1 bit")
-            self.sel = sel
-
+        for flag in sixteen_bit_inputs:
+            if sixteen_bit_inputs[flag] is not None:
+                if type(sixteen_bit_inputs[flag]) is not str:
+                    sixteen_bit_inputs[flag] = bin(sixteen_bit_inputs[flag])
+                if int(sixteen_bit_inputs[flag], 2) < 0 or int(sixteen_bit_inputs[flag], 2) > 65535:
+                    raise RuntimeError("%s input must be 1 bit" % flag)
+                
+        # set inputs (either valid or None, not worth retesting for None)
+        self.a = a
+        self.b = b
+        self.c = c
+        self._in = _in
+        self.sel = sel
+        self.zx = zx
+        self.nx = nx
+        self.zy = zy
+        self.ny = ny
+        self.f = f
+        self.no = no
+        self._in16 = _in16
+        self.a16 = a16
+        self.b16 = b16
+        self.c16 = c16
+        self.d16 = d16
+        self.e16 = e16
+        self.f16 = f16
+        self.g16 = g16
+        self.h16 = h16
+        
         if sel2 is not None:
             if type(sel2) is not str:
                 sel2 = bin(sel2)
@@ -77,75 +95,12 @@ class Gate(object):
                 raise RuntimeError("sel3 input must be 3 bits")
             self.sel3 = sel3
             
-        if _in is not None:
-            if type(_in) is not str:
-                _in = bin(_in)
-            if _in not in ("0b0", "0b1"):
-                raise RuntimeError("_in input must be 1 bit")
-            self._in = _in
-
         if _in8 is not None:
             if type(_in8) is not str:
                 _in8 = bin(_in8)
             if int(_in8, 2) < 0 or int(_in8, 2) > 255:
                 raise RuntimeError("_in8 input must be 8 bits")
             self._in8 = _in8
-        
-        if a16 is not None:
-            if type(a16) is not str:
-                a16 = bin(a16)
-            if int(a16, 2) < 0 or int(a16, 2) > 65535:
-                raise RuntimeError("a16 input must be 16 bits")
-            self.a16 = a16
-        
-        if b16 is not None:
-            if type(b16) is not str:
-                b16 = bin(b16)
-            if int(b16, 2) < 0 or int(b16, 2) > 65535:
-                raise RuntimeError("b16 input must be 16 bits")
-            self.b16 = b16
-            
-        if c16 is not None:
-            if type(c16) is not str:
-                c16 = bin(c16)
-            if int(c16, 2) < 0 or int(c16, 2) > 65535:
-                raise RuntimeError("c16 input must be 16 bits")
-            self.c16 = c16
-            
-        if d16 is not None:
-            if type(d16) is not str:
-                d16 = bin(d16)
-            if int(d16, 2) < 0 or int(d16, 2) > 65535:
-                raise RuntimeError("d16 input must be 16 bits")
-            self.d16 = d16
-
-        if e16 is not None:
-            if type(e16) is not str:
-                e16 = bin(e16)
-            if int(e16, 2) < 0 or int(e16, 2) > 65535:
-                raise RuntimeError("e16 input must be 16 bits")
-            self.e16 = e16
-
-        if f16 is not None:
-            if type(f16) is not str:
-                f16 = bin(f16)
-            if int(f16, 2) < 0 or int(f16, 2) > 65535:
-                raise RuntimeError("f16 input must be 16 bits")
-            self.f16 = f16
-
-        if g16 is not None:
-            if type(g16) is not str:
-                g16 = bin(g16)
-            if int(g16, 2) < 0 or int(g16, 2) > 65535:
-                raise RuntimeError("g16 input must be 16 bits")
-            self.g16 = g16
-
-        if h16 is not None:
-            if type(h16) is not str:
-                h16 = bin(h16)
-            if int(h16, 2) < 0 or int(h16, 2) > 65535:
-                raise RuntimeError("h16 input must be 16 bits")
-            self.h16 = h16
             
         # run gate specific logic
         return self.calculate()
@@ -498,8 +453,10 @@ class Mux8Way16(Gate):
     """
     def calculate(self):
         # endianness only matters for selector / result order
-        mux4way16_0 = Mux4Way16().evaluate(a16=self.a16, b16=self.b16, c16=self.c16, d16=self.d16, sel2="0b"+self.sel3[-2]+self.sel3[-1])
-        mux4way16_1 = Mux4Way16().evaluate(a16=self.e16, b16=self.f16, c16=self.g16, d16=self.h16, sel2="0b"+self.sel3[-2]+self.sel3[-1])
+        mux4way16_0 = Mux4Way16().evaluate(a16=self.a16, b16=self.b16, c16=self.c16, d16=self.d16,
+                                           sel2="0b"+self.sel3[-2]+self.sel3[-1])
+        mux4way16_1 = Mux4Way16().evaluate(a16=self.e16, b16=self.f16, c16=self.g16, d16=self.h16,
+                                           sel2="0b"+self.sel3[-2]+self.sel3[-1])
         return Mux16().evaluate(a16=mux4way16_0, b16=mux4way16_1, sel="0b"+self.sel3[-3])
 
 
@@ -671,40 +628,113 @@ class Inc16(Gate):
         return Add16().evaluate(a16=self.a16, b16="0b0000000000000001")
 
 
+class ALU(Gate):
+    """
+    ALU (Arithmetic Logic Unit) Computes one of the following functions:
+        x+y, x-y, y-x, 0, 1, -1, x, y, -x, -y, !x, !y,
+        x+1, y+1, x-1, y-1, x&y, x|y on two 16-bit inputs,
+
+    // if (zx == 1) set x = 0        // 16-bit constant
+    // if (nx == 1) set x = !x       // bitwise not
+    // if (zy == 1) set y = 0        // 16-bit constant
+    // if (ny == 1) set y = !y       // bitwise not
+    // if (f == 1)  set out = x + y  // integer 2's complement addition
+    // if (f == 0)  set out = x & y  // bitwise and
+    // if (no == 1) set out = !out   // bitwise not
+    // if (out == 0) set zr = 1
+    // if (out < 0) set ng = 1
+
+    CHIP ALU {
+    IN
+        x[16], y[16],  // 16-bit inputs
+        zx, nx, zy, ny, f, no; // 1 bit flags
+
+    OUT
+        out[16], // 16-bit output
+        zr, ng; // 1 bit flags
+
+    PARTS:
+    //zx/zy (1=zero input)
+    Mux16(a=x, b=false, sel=zx, out=xZ);
+    Mux16(a=y, b=false, sel=zy, out=yZ);
+
+    //nx/ny (1=not input)
+    Not16(in=xZ, out=xZnot);
+    Not16(in=yZ, out=yZnot);
+    Mux16(a=xZ, b=xZnot, sel=nx, out=xZN);
+    Mux16(a=yZ, b=yZnot, sel=ny, out=yZN);
+
+    //f (0=and, 1=add)
+    Add16(a=xZN, b=yZN, out=xyZNadd);
+    And16(a=xZN, b=yZN, out=xyZNand);
+    Mux16(a=xyZNand, b=xyZNadd, sel=f, out=xyZNF);
+
+    //no (1=not output)
+    Not16(in=xyZNF, out=xyZNFnot);
+    Mux16(a=xyZNF, b=xyZNFnot, sel=no, out[0..7]=xyZNFN1,
+        out[8..15]=xyZNFN2, out=out, out[15]=ng); // ng=MSB (nostat compatible)
+
+    //zr (0=[result==0], 1=[result!=0]
+    Or8Way(in=xyZNFN1, out=Or81);
+    Or8Way(in=xyZNFN2, out=Or82);
+    Or(a=Or81, b=Or82, out=zrOr);
+    Not(in=zrOr, out=zr);
+    }
+    """
+
+
 def input_unit_test():
     """
     Test input sizes: catch RuntimeException(s)
     """
     # input size unit test
     _gate = Gate()
+    test = []
     for i in range(0, 9):
         try:
+            if i == 0:
+                # non-binary value
+                test.append(_gate.evaluate(a="foobar"))  # fail
+                raise Exception("Unit test failed (continued where it should have excepted)")
             if i == 1:
-                test = _gate.evaluate(a="0b10")  # fail
+                # 1 bit upper bound
+                test.append(_gate.evaluate(a="0b10"))  # fail
                 raise Exception("Unit test failed (continued where it should have excepted)")
             if i == 2:
-                test = _gate.evaluate(b="0b10")  # fail
+                # 2 bit lower bound
+                test.append(_gate.evaluate(sel2="0b1"))  # fail
                 raise Exception("Unit test failed (continued where it should have excepted)")
             if i == 3:
-                test = _gate.evaluate(sel="0b10")  # fail
+                # 2 bit upper bound
+                test.append(_gate.evaluate(sel2="0b100"))  # fail
                 raise Exception("Unit test failed (continued where it should have excepted)")
             if i == 4:
-                test = _gate.evaluate(_in="0b10")  # fail
+                # 3 bit lower bound
+                test.append(_gate.evaluate(sel3="0b11"))  # fail
                 raise Exception("Unit test failed (continued where it should have excepted)")
             if i == 5:
-                test = _gate.evaluate(sel2="0b100")  # fail
+                # 3 bit upper bound
+                test.append(_gate.evaluate(sel3="0b1000"))  # fail
                 raise Exception("Unit test failed (continued where it should have excepted)")
             if i == 6:
-                test = _gate.evaluate(_in8="0b0000")  # fail
+                # 8 bit lower bound
+                test.append(_gate.evaluate(_in8="0b1111111"))  # fail
                 raise Exception("Unit test failed (continued where it should have excepted)")
             if i == 7:
-                test = _gate.evaluate(a16="0b0000")  # fail
+                # 8 bit upper bound
+                test.append(_gate.evaluate(_in8="0b100000000"))  # fail
                 raise Exception("Unit test failed (continued where it should have excepted)")
             if i == 8:
-                test = _gate.evaluate(b16="0b0000")  # fail
+                # 16 bit lower bound
+                test.append(_gate.evaluate(a16="0b111111111111111"))  # fail
+                raise Exception("Unit test failed (continued where it should have excepted)")
+            if i == 9:
+                # 16 bit upper bound
+                test.append(_gate.evaluate(a16="0b10000000000000000"))  # fail
                 raise Exception("Unit test failed (continued where it should have excepted)")
         except RuntimeError or NotImplementedError:
             continue
+    assert test == []
 
 
 def main():
