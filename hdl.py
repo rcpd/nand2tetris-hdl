@@ -1100,13 +1100,20 @@ def main():
     assert _register.evaluate(_in16="0b0000000000000001", load="0b1") == "0b0000000000000001"
     assert _register.evaluate(_in16="0b1000000000000000", load="0b1") == "0b1000000000000000"
 
-    # PC: load 0/1
+    # PC: load (inc=0, reset=0)
     assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
     assert _pc.evaluate(_in16="0b1111111111111111", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
-    assert _pc.evaluate(_in16="0b0000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000000"
     assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b0", reset="0b0") == "0b1111111111111111"
-    # TODO: inc/reset
+    assert _pc.evaluate(_in16="0b0000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000000"
 
+    # PC: inc/reset (load=0)
+    assert _pc.evaluate(_in16="0b0000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000000"  # load
+    assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b1", reset="0b0") == "0b0000000000000001"
+    assert _pc.evaluate(_in16="0b1111111111111111", load="0b0", inc="0b0", reset="0b1") == "0b0000000000000000"
+
+    # PC: reset>load>inc
+    assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b1", reset="0b1") == "0b0000000000000000"
+    assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b1", reset="0b0") == "0b1111111111111111"
 
 
 if __name__ == "__main__":
