@@ -36,10 +36,11 @@ class Gate(object):
         self.load = None
         self.inc = None
         self.reset = None
+        self.addr3 = None
 
     def evaluate(self, a=None, b=None, c=None, _in=None, sel=None, sel2=None, sel3=None, _in8=None, _in16=None,
                  a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None, x=None, y=None,
-                 zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None):
+                 zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None, addr3=None):
         """
         validate input, None = uninitialized
         """
@@ -90,6 +91,7 @@ class Gate(object):
         self.load = load
         self.inc = inc
         self.reset = reset
+        self.addr3 = addr3
 
         if sel2 is not None:
             if type(sel2) is not str:
@@ -104,7 +106,14 @@ class Gate(object):
             if int(sel3, 2) < 0 or int(sel3, 2) > 7:
                 raise RuntimeError("sel3 input must be 3 bits")
             self.sel3 = sel3
-            
+        
+        if addr3 is not None:
+            if type(addr3) is not str:
+                addr3 = bin(addr3)
+            if int(addr3, 2) < 0 or int(addr3, 2) > 7:
+                raise RuntimeError("addr3 input must be 3 bits")
+            self.addr3 = addr3
+        
         if _in8 is not None:
             if type(_in8) is not str:
                 _in8 = bin(_in8)
@@ -137,11 +146,11 @@ class NotGate(Gate):
     For a single input, return the opposite
 
     CHIP Not {
-    IN in;
-    OUT out;
+        IN in;
+        OUT out;
 
     PARTS:
-    Nand(a=in, b=in, out=out);
+        Nand(a=in, b=in, out=out);
     }
     """
     def calculate(self):
@@ -157,26 +166,26 @@ class Not16Gate(Gate):
     """
     NotGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
     CHIP Not16 {
-    IN in[16];
-    OUT out[16];
+        IN in[16];
+        OUT out[16];
 
     PARTS:
-    Not(in=in[0], out=out[0]);
-    Not(in=in[1], out=out[1]);
-    Not(in=in[2], out=out[2]);
-    Not(in=in[3], out=out[3]);
-    Not(in=in[4], out=out[4]);
-    Not(in=in[5], out=out[5]);
-    Not(in=in[6], out=out[6]);
-    Not(in=in[7], out=out[7]);
-    Not(in=in[8], out=out[8]);
-    Not(in=in[9], out=out[9]);
-    Not(in=in[10], out=out[10]);
-    Not(in=in[11], out=out[11]);
-    Not(in=in[12], out=out[12]);
-    Not(in=in[13], out=out[13]);
-    Not(in=in[14], out=out[14]);
-    Not(in=in[15], out=out[15]);
+        Not(in=in[0], out=out[0]);
+        Not(in=in[1], out=out[1]);
+        Not(in=in[2], out=out[2]);
+        Not(in=in[3], out=out[3]);
+        Not(in=in[4], out=out[4]);
+        Not(in=in[5], out=out[5]);
+        Not(in=in[6], out=out[6]);
+        Not(in=in[7], out=out[7]);
+        Not(in=in[8], out=out[8]);
+        Not(in=in[9], out=out[9]);
+        Not(in=in[10], out=out[10]);
+        Not(in=in[11], out=out[11]);
+        Not(in=in[12], out=out[12]);
+        Not(in=in[13], out=out[13]);
+        Not(in=in[14], out=out[14]);
+        Not(in=in[15], out=out[15]);
     }
     """
     def calculate(self):
@@ -194,12 +203,12 @@ class AndGate(Gate):
     For two 1 inputs return a 1 output, else return a 0 output
 
     CHIP And {
-    IN a, b;
-    OUT out;
+        IN a, b;
+        OUT out;
 
     PARTS:
-    Nand(a=a, b=b, out=aNand);
-    Nand(a=aNand, b=aNand, out=out);
+        Nand(a=a, b=b, out=aNand);
+        Nand(a=aNand, b=aNand, out=out);
     }
     """
     def calculate(self):
@@ -216,12 +225,12 @@ class And16Gate(Gate):
     AndGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
 
     CHIP And {
-    IN a, b;
-    OUT out;
+        IN a, b;
+        OUT out;
 
     PARTS:
-    Nand(a=a, b=b, out=aNand);
-    Nand(a=aNand, b=aNand, out=out);
+        Nand(a=a, b=b, out=aNand);
+        Nand(a=aNand, b=aNand, out=out);
     }
     """
     def calculate(self):
@@ -239,13 +248,13 @@ class OrGate(Gate):
     If either of the two inputs are 1 return a 1 output, else return a 0 output
 
     CHIP Or {
-    IN a, b;
-    OUT out;
+        IN a, b;
+        OUT out;
 
     PARTS:
-    Nand(a=a, b=a, out=aNand);
-    Nand(a=b, b=b, out=bNand);
-    Nand(a=aNand, b=bNand, out=out);
+        Nand(a=a, b=a, out=aNand);
+        Nand(a=b, b=b, out=bNand);
+        Nand(a=aNand, b=bNand, out=out);
     }
     """
     def calculate(self):
@@ -260,26 +269,26 @@ class Or16Gate(Gate):
     OrGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
 
     CHIP Or16 {
-    IN a[16], b[16];
-    OUT out[16];
+        IN a[16], b[16];
+        OUT out[16];
 
     PARTS:
-    Or(a=a[0], b=b[0], out=out[0]);
-    Or(a=a[1], b=b[1], out=out[1]);
-    Or(a=a[2], b=b[2], out=out[2]);
-    Or(a=a[3], b=b[3], out=out[3]);
-    Or(a=a[4], b=b[4], out=out[4]);
-    Or(a=a[5], b=b[5], out=out[5]);
-    Or(a=a[6], b=b[6], out=out[6]);
-    Or(a=a[7], b=b[7], out=out[7]);
-    Or(a=a[8], b=b[8], out=out[8]);
-    Or(a=a[9], b=b[9], out=out[9]);
-    Or(a=a[10], b=b[10], out=out[10]);
-    Or(a=a[11], b=b[11], out=out[11]);
-    Or(a=a[12], b=b[12], out=out[12]);
-    Or(a=a[13], b=b[13], out=out[13]);
-    Or(a=a[14], b=b[14], out=out[14]);
-    Or(a=a[15], b=b[15], out=out[15]);
+        Or(a=a[0], b=b[0], out=out[0]);
+        Or(a=a[1], b=b[1], out=out[1]);
+        Or(a=a[2], b=b[2], out=out[2]);
+        Or(a=a[3], b=b[3], out=out[3]);
+        Or(a=a[4], b=b[4], out=out[4]);
+        Or(a=a[5], b=b[5], out=out[5]);
+        Or(a=a[6], b=b[6], out=out[6]);
+        Or(a=a[7], b=b[7], out=out[7]);
+        Or(a=a[8], b=b[8], out=out[8]);
+        Or(a=a[9], b=b[9], out=out[9]);
+        Or(a=a[10], b=b[10], out=out[10]);
+        Or(a=a[11], b=b[11], out=out[11]);
+        Or(a=a[12], b=b[12], out=out[12]);
+        Or(a=a[13], b=b[13], out=out[13]);
+        Or(a=a[14], b=b[14], out=out[14]);
+        Or(a=a[15], b=b[15], out=out[15]);
     }
     """
     def calculate(self):
@@ -297,17 +306,17 @@ class Or8Way(Gate):
     8 bit bus of 1 bit inputs, 1 bit output, if any bits 1 return 1, else 0
 
     CHIP Or8Way {
-    IN in[8];
-    OUT out;
+        IN in[8];
+        OUT out;
 
     PARTS:
-    Or(a=in[0], b=in[1], out=or1);
-    Or(a=in[2], b=in[3], out=or2);
-    Or(a=in[4], b=in[5], out=or3);
-    Or(a=in[6], b=in[7], out=or4);
-    Or(a=or1, b=or2, out=or5);
-    Or(a=or3, b=or4, out=or6);
-    Or(a=or5, b=or6, out=out);
+        Or(a=in[0], b=in[1], out=or1);
+        Or(a=in[2], b=in[3], out=or2);
+        Or(a=in[4], b=in[5], out=or3);
+        Or(a=in[6], b=in[7], out=or4);
+        Or(a=or1, b=or2, out=or5);
+        Or(a=or3, b=or4, out=or6);
+        Or(a=or5, b=or6, out=out);
     }
     """
     def calculate(self):
@@ -328,14 +337,14 @@ class XorGate(Gate):
     If the two inputs are different return a 1 output, else return a 0 output
 
     CHIP Xor {
-    IN a, b;
-    OUT out;
+        IN a, b;
+        OUT out;
 
     PARTS:
-    Nand(a=a, b=b, out=aNand);
-    Nand(a=a, b=aNand, out=bNand);
-    Nand(a=aNand, b=b, out=cNand);
-    Nand(a=bNand, b=cNand, out=out);
+        Nand(a=a, b=b, out=aNand);
+        Nand(a=a, b=aNand, out=bNand);
+        Nand(a=aNand, b=b, out=cNand);
+        Nand(a=bNand, b=cNand, out=out);
     }
     """
     def calculate(self):
@@ -349,19 +358,37 @@ class XorGate(Gate):
 class NorGate(Gate):
     """
     If either of the two inputs are 1 return a 0 output, else return a 1 output
+    CHIP Nor {
+        IN a, b;
+        OUT out;
+
+    PARTS:
+        Or(a=a,b=b,out=orOut);
+        Not(in=orOut,out=out);
+    }
     """
     def calculate(self):
         # endianness does not matter as only 1 bit returned
-        raise NotImplementedError
+        _or = OrGate().evaluate(a=self.a, b=self.b)
+        return NotGate().evaluate(_in=_or)
 
 
 class XNorGate(Gate):
     """
-    If the two inputs are the same return a 1 output, else return a 0 output
+    If the two inputs are different return a 0 output, else return a 1 output
+    CHIP XNor {
+        IN a, b;
+        OUT out;
+
+    PARTS:
+        Xor(a=a,b=b,out=xorOut);
+        Not(in=xorOut,out=out);
+    }
     """
     def calculate(self):
         # endianness does not matter as only 1 bit returned
-        raise NotImplementedError
+        _xor = XorGate().evaluate(a=self.a, b=self.b)
+        return NotGate().evaluate(_in=_xor)
 
 
 class Mux(Gate):
@@ -369,14 +396,14 @@ class Mux(Gate):
     Select an output from two inputs, only chosen input will be emitted
 
     CHIP Mux {
-    IN a, b, sel;
-    OUT out;
+        IN a, b, sel;
+        OUT out;
 
     PARTS:
-    Nand(a=sel, b=sel, out=aNand);
-    Nand(a=b, b=sel, out=bNand);
-    Nand(a=aNand, b=a, out=cNand);
-    Nand(a=bNand, b=cNand, out=out);
+        Nand(a=sel, b=sel, out=aNand);
+        Nand(a=b, b=sel, out=bNand);
+        Nand(a=aNand, b=a, out=cNand);
+        Nand(a=bNand, b=cNand, out=out);
     }
     """
     def calculate(self):
@@ -392,26 +419,26 @@ class Mux16(Gate):
     Mux but with two x 16 bit inputs and one 16 bit output, only chosen input will be emitted
 
     CHIP Mux16 {
-    IN a[16], b[16], sel;
-    OUT out[16];
+        IN a[16], b[16], sel;
+        OUT out[16];
 
     PARTS:
-    Mux(a=a[0], b=b[0], sel=sel, out=out[0]);
-    Mux(a=a[1], b=b[1], sel=sel, out=out[1]);
-    Mux(a=a[2], b=b[2], sel=sel, out=out[2]);
-    Mux(a=a[3], b=b[3], sel=sel, out=out[3]);
-    Mux(a=a[4], b=b[4], sel=sel, out=out[4]);
-    Mux(a=a[5], b=b[5], sel=sel, out=out[5]);
-    Mux(a=a[6], b=b[6], sel=sel, out=out[6]);
-    Mux(a=a[7], b=b[7], sel=sel, out=out[7]);
-    Mux(a=a[8], b=b[8], sel=sel, out=out[8]);
-    Mux(a=a[9], b=b[9], sel=sel, out=out[9]);
-    Mux(a=a[10], b=b[10], sel=sel, out=out[10]);
-    Mux(a=a[11], b=b[11], sel=sel, out=out[11]);
-    Mux(a=a[12], b=b[12], sel=sel, out=out[12]);
-    Mux(a=a[13], b=b[13], sel=sel, out=out[13]);
-    Mux(a=a[14], b=b[14], sel=sel, out=out[14]);
-    Mux(a=a[15], b=b[15], sel=sel, out=out[15]);
+        Mux(a=a[0], b=b[0], sel=sel, out=out[0]);
+        Mux(a=a[1], b=b[1], sel=sel, out=out[1]);
+        Mux(a=a[2], b=b[2], sel=sel, out=out[2]);
+        Mux(a=a[3], b=b[3], sel=sel, out=out[3]);
+        Mux(a=a[4], b=b[4], sel=sel, out=out[4]);
+        Mux(a=a[5], b=b[5], sel=sel, out=out[5]);
+        Mux(a=a[6], b=b[6], sel=sel, out=out[6]);
+        Mux(a=a[7], b=b[7], sel=sel, out=out[7]);
+        Mux(a=a[8], b=b[8], sel=sel, out=out[8]);
+        Mux(a=a[9], b=b[9], sel=sel, out=out[9]);
+        Mux(a=a[10], b=b[10], sel=sel, out=out[10]);
+        Mux(a=a[11], b=b[11], sel=sel, out=out[11]);
+        Mux(a=a[12], b=b[12], sel=sel, out=out[12]);
+        Mux(a=a[13], b=b[13], sel=sel, out=out[13]);
+        Mux(a=a[14], b=b[14], sel=sel, out=out[14]);
+        Mux(a=a[15], b=b[15], sel=sel, out=out[15]);
     }
     """
     def calculate(self):
@@ -429,13 +456,13 @@ class Mux4Way16(Gate):
     Mux16 but with 4 x 16 bit inputs, one 16 bit output, two bit selector, only selected is emitted
 
     CHIP Mux4Way16 {
-    IN a[16], b[16], c[16], d[16], sel[2];
-    OUT out[16];
+        IN a[16], b[16], c[16], d[16], sel[2];
+        OUT out[16];
 
     PARTS:
-    Mux16(a=a, b=b, sel=sel[0], out=muxAB);
-    Mux16(a=c, b=d, sel=sel[0], out=muxCD);
-    Mux16(a=muxAB, b=muxCD, sel=sel[1], out=out);
+        Mux16(a=a, b=b, sel=sel[0], out=muxAB);
+        Mux16(a=c, b=d, sel=sel[0], out=muxCD);
+        Mux16(a=muxAB, b=muxCD, sel=sel[1], out=out);
     }
     """
     def calculate(self):
@@ -456,9 +483,9 @@ class Mux8Way16(Gate):
     OUT out[16];
 
     PARTS:
-    Mux4Way16(a=a, b=b, c=c, d=d, sel=sel[0..1], out=muxAD);
-    Mux4Way16(a=e, b=f, c=g, d=h, sel=sel[0..1], out=muxEH);
-    Mux16(a=muxAD, b=muxEH, sel=sel[2], out=out);
+        Mux4Way16(a=a, b=b, c=c, d=d, sel=sel[0..1], out=muxAD);
+        Mux4Way16(a=e, b=f, c=g, d=h, sel=sel[0..1], out=muxEH);
+        Mux16(a=muxAD, b=muxEH, sel=sel[2], out=out);
     }
     """
     def calculate(self):
@@ -475,15 +502,15 @@ class DMux(Mux):
     Select one of two outputs, input passes through and unselected output is always 0
 
     CHIP DMux {
-    IN in, sel;
-    OUT a, b;
+        IN in, sel;
+        OUT a, b;
 
     PARTS:
-    Nand(a=sel, b=sel, out=aNand);
-    Nand(a=in, b=aNand, out=bNand);
-    Nand(a=sel, b=in, out=cNand);
-    Nand(a=bNand, b=bNand, out=a);
-    Nand(a=cNand, b=cNand, out=b);
+        Nand(a=sel, b=sel, out=aNand);
+        Nand(a=in, b=aNand, out=bNand);
+        Nand(a=sel, b=in, out=cNand);
+        Nand(a=bNand, b=bNand, out=a);
+        Nand(a=cNand, b=cNand, out=b);
     }
     """
     def calculate(self):
@@ -499,13 +526,13 @@ class DMux4Way(DMux):
     With a 2 bit selector choose one of four outputs, input passes through and unselected is always 0
 
     CHIP DMux4Way {
-    IN in, sel[2];
-    OUT a, b, c, d;
+        IN in, sel[2];
+        OUT a, b, c, d;
 
     PARTS:
-    DMux(in=in, sel=sel[1], a=dIn0, b=dIn1);
-    DMux(in=dIn0, sel=sel[0], a=a, b=b);
-    DMux(in=dIn1, sel=sel[0], a=c, b=d);
+        DMux(in=in, sel=sel[1], a=dIn0, b=dIn1);
+        DMux(in=dIn0, sel=sel[0], a=a, b=b);
+        DMux(in=dIn1, sel=sel[0], a=c, b=d);
     }
     """
     def calculate(self):
@@ -521,13 +548,13 @@ class DMux8Way(DMux):
     With a 3 bit selector choose one of 8 outputs, input passes through and unselected is always 0
 
     CHIP DMux8Way {
-    IN in, sel[3];
-    OUT a, b, c, d, e, f, g, h;
+        IN in, sel[3];
+        OUT a, b, c, d, e, f, g, h;
 
     PARTS:
-    DMux(in=in, sel=sel[2], a=dIn0, b=dIn1);
-    DMux4Way(in=dIn0, sel=sel[0..1], a=a, b=b, c=c, d=d);
-    DMux4Way(in=dIn1, sel=sel[0..1], a=e, b=f, c=g, d=h);
+        DMux(in=in, sel=sel[2], a=dIn0, b=dIn1);
+        DMux4Way(in=dIn0, sel=sel[0..1], a=a, b=b, c=c, d=d);
+        DMux4Way(in=dIn1, sel=sel[0..1], a=e, b=f, c=g, d=h);
     }
     """
     def calculate(self):
@@ -543,13 +570,13 @@ class HalfAdder(Gate):
     Computes the sum of 2 x 1 bit inputs, output carry bit & sum bit
 
     CHIP HalfAdder {
-    IN a, b;    // 1-bit inputs
-    OUT sum,    // Right bit of a + b
-        carry;  // Left bit of a + b
+        IN a, b;    // 1-bit inputs
+        OUT sum,    // Right bit of a + b
+            carry;  // Left bit of a + b
 
     PARTS:
-    Xor(a=a, b=b, out=sum);
-    And(a=a, b=b, out=carry);
+        Xor(a=a, b=b, out=sum);
+        And(a=a, b=b, out=carry);
     }
     """
     def calculate(self):
@@ -563,14 +590,14 @@ class FullAdder(Gate):
     Computes the sum of 3 x 1 bit inputs, output carry bit & sum bit
 
     CHIP FullAdder {
-    IN a, b, c;  // 1-bit inputs
-    OUT sum,     // Right bit of a + b + c
-        carry;   // Left bit of a + b + c
+        IN a, b, c;  // 1-bit inputs
+        OUT sum,     // Right bit of a + b + c
+            carry;   // Left bit of a + b + c
 
     PARTS:
-    HalfAdder(a=a, b=b, sum=sumAB, carry=carryAB);
-    HalfAdder(a=c, b=sumAB, sum=sum, carry=carryABC);
-    Or(a=carryABC, b=carryAB, out=carry);
+        HalfAdder(a=a, b=b, sum=sumAB, carry=carryAB);
+        HalfAdder(a=c, b=sumAB, sum=sum, carry=carryABC);
+        Or(a=carryABC, b=carryAB, out=carry);
     }
     """
     def calculate(self):
@@ -588,7 +615,7 @@ class Add16(Gate):
         IN a[16], b[16];
         OUT out[16];
 
-        PARTS:
+    PARTS:
         HalfAdder(a=a[0], b=b[0], sum=out[0], carry=carry0);
         FullAdder(a=a[1], b=b[1], c=carry0, sum=out[1], carry=carry1);
         FullAdder(a=a[2], b=b[2], c=carry1, sum=out[2], carry=carry2);
@@ -627,11 +654,11 @@ class Inc16(Gate):
     Increment a 16 bit number
 
     CHIP Inc16 {
-    IN in[16];
-    OUT out[16];
+        IN in[16];
+        OUT out[16];
 
     PARTS:
-    Add16(a=in, b[0]=true, b[1..15]=false, out=out);
+        Add16(a=in, b[0]=true, b[1..15]=false, out=out);
     }
     """
     def calculate(self):
@@ -664,31 +691,31 @@ class ALU(Gate):
         zr, ng; // 1 bit flags
 
     PARTS:
-    //zx/zy (1=zero input)
-    Mux16(a=x, b=false, sel=zx, out=xZ);
-    Mux16(a=y, b=false, sel=zy, out=yZ);
-
-    //nx/ny (1=not input)
-    Not16(in=xZ, out=xZnot);
-    Not16(in=yZ, out=yZnot);
-    Mux16(a=xZ, b=xZnot, sel=nx, out=xZN);
-    Mux16(a=yZ, b=yZnot, sel=ny, out=yZN);
-
-    //f (0=and, 1=add)
-    Add16(a=xZN, b=yZN, out=xyZNadd);
-    And16(a=xZN, b=yZN, out=xyZNand);
-    Mux16(a=xyZNand, b=xyZNadd, sel=f, out=xyZNF);
-
-    //no (1=not output)
-    Not16(in=xyZNF, out=xyZNFnot);
-    Mux16(a=xyZNF, b=xyZNFnot, sel=no, out[0..7]=xyZNFN1,
-        out[8..15]=xyZNFN2, out=out, out[15]=ng); // ng=MSB (nostat compatible)
-
-    //zr (0=[result==0], 1=[result!=0]
-    Or8Way(in=xyZNFN1, out=Or81);
-    Or8Way(in=xyZNFN2, out=Or82);
-    Or(a=Or81, b=Or82, out=zrOr);
-    Not(in=zrOr, out=zr);
+        //zx/zy (1=zero input)
+        Mux16(a=x, b=false, sel=zx, out=xZ);
+        Mux16(a=y, b=false, sel=zy, out=yZ);
+    
+        //nx/ny (1=not input)
+        Not16(in=xZ, out=xZnot);
+        Not16(in=yZ, out=yZnot);
+        Mux16(a=xZ, b=xZnot, sel=nx, out=xZN);
+        Mux16(a=yZ, b=yZnot, sel=ny, out=yZN);
+    
+        //f (0=and, 1=add)
+        Add16(a=xZN, b=yZN, out=xyZNadd);
+        And16(a=xZN, b=yZN, out=xyZNand);
+        Mux16(a=xyZNand, b=xyZNadd, sel=f, out=xyZNF);
+    
+        //no (1=not output)
+        Not16(in=xyZNF, out=xyZNFnot);
+        Mux16(a=xyZNF, b=xyZNFnot, sel=no, out[0..7]=xyZNFN1,
+            out[8..15]=xyZNFN2, out=out, out[15]=ng); // ng=MSB (nostat compatible)
+    
+        //zr (0=[result==0], 1=[result!=0]
+        Or8Way(in=xyZNFN1, out=Or81);
+        Or8Way(in=xyZNFN2, out=Or82);
+        Or(a=Or81, b=Or82, out=zrOr);
+        Not(in=zrOr, out=zr);
     }
     """
     def __init__(self):
@@ -761,7 +788,7 @@ class Register(Gate):
         IN in[16], load;
         OUT out[16];
 
-        PARTS:
+    PARTS:
         Bit(in=in[0], load=load, out=out[0]);
         Bit(in=in[1], load=load, out=out[1]);
         Bit(in=in[2], load=load, out=out[2]);
@@ -780,6 +807,10 @@ class Register(Gate):
         Bit(in=in[15], load=load, out=out[15]);
     }
     """
+    def __init__(self):
+        super().__init__()
+        self.dff = "0b0"  # DFF not implemented (primitive)
+
     def calculate(self):
         byte_str = "0b"
         for i in reversed(range(1, 17)):
@@ -797,15 +828,15 @@ class PC(Gate):
     // else                    out[t+1] = out[t]
 
     CHIP PC {
-    IN in[16],load,inc,reset;
-    OUT out[16];
+        IN in[16],load,inc,reset;
+        OUT out[16];
 
     PARTS:
-    Inc16(in=feedback, out=pc);
-    Mux16(a=feedback, b=pc, sel=inc, out=w0);
-    Mux16(a=w0, b=in, sel=load, out=w1);
-    Mux16(a=w1, b=false, sel=reset, out=cout);
-    Register(in=cout, load=true, out=out, out=feedback);
+        Inc16(in=feedback, out=pc);
+        Mux16(a=feedback, b=pc, sel=inc, out=w0);
+        Mux16(a=w0, b=in, sel=load, out=w1);
+        Mux16(a=w1, b=false, sel=reset, out=cout);
+        Register(in=cout, load=true, out=out, out=feedback);
     }
     """
     def __init__(self):
@@ -888,7 +919,8 @@ def main():
     _or16 = Or16Gate()
     _or8way = Or8Way()
     _xor = XorGate()
-    # TODO: nor, xnor
+    _nor = NorGate()
+    _xnor = XNorGate()
     _mux = Mux()
     _mux16 = Mux16()
     _mux4way16 = Mux4Way16()
@@ -939,6 +971,12 @@ def main():
     assert _or.evaluate(a="0b0", b="0b1") == "0b1"
     assert _or.evaluate(a="0b0", b="0b0") == "0b0"
 
+    # If either of the two inputs are 1 return a 0 output, else return a 1 output
+    assert _nor.evaluate(a="0b1", b="0b1") == "0b0"
+    assert _nor.evaluate(a="0b1", b="0b0") == "0b0"
+    assert _nor.evaluate(a="0b0", b="0b1") == "0b0"
+    assert _nor.evaluate(a="0b0", b="0b0") == "0b1"
+
     # OrGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
     assert _or16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000") == "0b0000000000000000"
     assert _or16.evaluate(a16="0b1111111111111111", b16="0b1111111111111111") == "0b1111111111111111"
@@ -955,6 +993,12 @@ def main():
     assert _xor.evaluate(a="0b1", b="0b0") == "0b1"
     assert _xor.evaluate(a="0b0", b="0b1") == "0b1"
     assert _xor.evaluate(a="0b0", b="0b0") == "0b0"
+
+    # If the two inputs are different return a 0 output, else return a 1 output
+    assert _xnor.evaluate(a="0b1", b="0b1") == "0b1"
+    assert _xnor.evaluate(a="0b1", b="0b0") == "0b0"
+    assert _xnor.evaluate(a="0b0", b="0b1") == "0b0"
+    assert _xnor.evaluate(a="0b0", b="0b0") == "0b1"
 
     # Select an output from two inputs, only chosen input will be emitted
     assert _mux.evaluate(a="0b1", b="0b0", sel="0b0") == "0b1"
@@ -1091,6 +1135,7 @@ def main():
     assert _bit.evaluate(_in="0b0", load="0b1") == "0b0"
     assert _bit.evaluate(_in="0b1", load="0b0") == "0b0"
     assert _bit.evaluate(_in="0b1", load="0b1") == "0b1"
+    assert _bit.evaluate(_in="0b0", load="0b0") == "0b1"
 
     # 16-bit register, if load emit in else dff (previous value)
     assert _register.evaluate(_in16="0b0000000000000000", load="0b0") == "0b0000000000000000"
@@ -1099,6 +1144,8 @@ def main():
     assert _register.evaluate(_in16="0b1111111111111111", load="0b1") == "0b1111111111111111"
     assert _register.evaluate(_in16="0b0000000000000001", load="0b1") == "0b0000000000000001"
     assert _register.evaluate(_in16="0b1000000000000000", load="0b1") == "0b1000000000000000"
+
+    # assert _register.evaluate(_in16="0b0000000000000000", load="0b0") == "0b1000000000000000"  # FIXME
 
     # PC: load (inc=0, reset=0)
     assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
