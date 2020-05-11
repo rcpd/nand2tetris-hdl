@@ -959,7 +959,7 @@ class RAM8(Gate):
         r5 = self.r5.evaluate(_in16=self._in16, load=dmux8w[5])
         r6 = self.r6.evaluate(_in16=self._in16, load=dmux8w[6])
         r7 = self.r7.evaluate(_in16=self._in16, load=dmux8w[7])
-        print("class", r0, r1, r2, r3, r4, r5, r6, r7)
+        # print("class", r0, r1, r2, r3, r4, r5, r6, r7)
         return Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7, sel3=self.addr3)
 
 
@@ -1246,11 +1246,9 @@ def main():
 
     # DFF
     assert _dff.evaluate(_in="0b0", load="0b0") == ("0b0", "0b1")  # Q=0 (initial)
-
     assert _dff.evaluate(_in="0b1", load="0b1") == ("0b1", "0b0")  # Q=1 (set 1)
     assert _dff.evaluate(_in="0b1", load="0b0") == ("0b1", "0b0")  # Q=1 (no change)
     assert _dff.evaluate(_in="0b0", load="0b0") == ("0b1", "0b0")  # Q=1 (no change)
-
     assert _dff.evaluate(_in="0b0", load="0b1") == ("0b0", "0b0")  # Q=0 (set 0 / reset)
     assert _dff.evaluate(_in="0b1", load="0b0") == ("0b0", "0b1")  # Q=1 (no change)
     assert _dff.evaluate(_in="0b0", load="0b0") == ("0b0", "0b1")  # Q=1 (no change)
