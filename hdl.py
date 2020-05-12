@@ -1134,14 +1134,14 @@ class RAM512(Gate):
     def __init__(self, watermark=None):
         super().__init__()
         self.watermark = watermark
-        self.ram64_0 = RAM64()
-        self.ram64_1 = RAM64()
-        self.ram64_2 = RAM64()
-        self.ram64_3 = RAM64()
-        self.ram64_4 = RAM64()
-        self.ram64_5 = RAM64()
-        self.ram64_6 = RAM64()
-        self.ram64_7 = RAM64()
+        self.ram64_0 = RAM64(watermark="ram64_0")
+        self.ram64_1 = RAM64(watermark="ram64_1")
+        self.ram64_2 = RAM64(watermark="ram64_2")
+        self.ram64_3 = RAM64(watermark="ram64_3")
+        self.ram64_4 = RAM64(watermark="ram64_4")
+        self.ram64_5 = RAM64(watermark="ram64_5")
+        self.ram64_6 = RAM64(watermark="ram64_6")
+        self.ram64_7 = RAM64(watermark="ram64_7")
         self.ram64_0_out = "0b0000000000000000"
         self.ram64_1_out = "0b0000000000000000"
         self.ram64_2_out = "0b0000000000000000"
@@ -1156,7 +1156,7 @@ class RAM512(Gate):
         # 3 MSB = RAM64 block, 6 LSB = RAM8>Register blocks
         # only evaluate selected RAM64 block (python performance optimisation)
 
-        print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr9)
 
         dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr9[-9:-6])
         if "0b"+self.addr9[-9:-6] == "0b000":
@@ -1178,15 +1178,15 @@ class RAM512(Gate):
         else:
             raise RuntimeError("Bad case in RAM512: %s" % self.addr6[-9:-6])
 
-        # print("outputs:", self.ram8_0_out, self.ram8_1_out, self.ram8_2_out, self.ram8_3_out, self.ram8_4_out,
-        #       self.ram8_5_out, self.ram8_6_out, self.ram8_7_out)
+        # print("outputs:", self.ram64_0_out, self.ram64_1_out, self.ram64_2_out, self.ram64_3_out, self.ram64_4_out,
+        #       self.ram64_5_out, self.ram64_6_out, self.ram64_7_out)
 
         self.ram64_d_out = Mux8Way16().evaluate(
-            a16=self.ram64_0_out, b16=self.ram64_0_out, c16=self.ram64_0_out, d16=self.ram64_0_out,
-            e16=self.ram64_0_out, f16=self.ram64_0_out, g16=self.ram64_0_out, h16=self.ram64_0_out,
+            a16=self.ram64_0_out, b16=self.ram64_1_out, c16=self.ram64_2_out, d16=self.ram64_3_out,
+            e16=self.ram64_4_out, f16=self.ram64_5_out, g16=self.ram64_6_out, h16=self.ram64_7_out,
             sel3="0b"+self.addr9[-9:-6])
 
-        print(self.watermark, self.ram64_d_out)
+        # print(self.watermark, self.ram64_d_out)
         return self.ram64_d_out
 
 
@@ -1216,14 +1216,14 @@ class RAM4K(Gate):
     def __init__(self, watermark=None):
         super().__init__()
         self.watermark = watermark
-        self.ram512_0 = RAM512()
-        self.ram512_1 = RAM512()
-        self.ram512_2 = RAM512()
-        self.ram512_3 = RAM512()
-        self.ram512_4 = RAM512()
-        self.ram512_5 = RAM512()
-        self.ram512_6 = RAM512()
-        self.ram512_7 = RAM512()
+        self.ram512_0 = RAM512(watermark="ram512_0")
+        self.ram512_1 = RAM512(watermark="ram512_1")
+        self.ram512_2 = RAM512(watermark="ram512_2")
+        self.ram512_3 = RAM512(watermark="ram512_3")
+        self.ram512_4 = RAM512(watermark="ram512_4")
+        self.ram512_5 = RAM512(watermark="ram512_5")
+        self.ram512_6 = RAM512(watermark="ram512_6")
+        self.ram512_7 = RAM512(watermark="ram512_7")
         self.ram512_0_out = "0b0000000000000000"
         self.ram512_1_out = "0b0000000000000000"
         self.ram512_2_out = "0b0000000000000000"
@@ -1237,35 +1237,38 @@ class RAM4K(Gate):
     def calculate(self):
         # 3 MSB = RAM512 block, 9 LSB = RAM64>RAM8>Register blocks
         # only evaluate selected RAM512 block (python performance optimisation)
-        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
-        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr12[-12:-9])
-        if "0b"+self.addr9[-12:-9] == "0b000":
-            self.ram512_0 = self.ram512_0.evaluate(_in16=self._in16, load=dmux8w[0], addr9=self.addr12[-9:])
-        elif "0b"+self.addr9[-12:-9] == "0b001":
-            self.ram512_1 = self.ram512_1.evaluate(_in16=self._in16, load=dmux8w[1], addr9=self.addr12[-9:])
-        elif "0b"+self.addr9[-12:-9] == "0b010":
-            self.ram512_2 = self.ram512_2.evaluate(_in16=self._in16, load=dmux8w[2], addr9=self.addr12[-9:])
-        elif "0b"+self.addr9[-12:-9] == "0b011":
-            self.ram512_3 = self.ram512_3.evaluate(_in16=self._in16, load=dmux8w[3], addr9=self.addr12[-9:])
-        elif "0b"+self.addr9[-12:-9] == "0b100":
-            self.ram512_4 = self.ram512_4.evaluate(_in16=self._in16, load=dmux8w[4], addr9=self.addr12[-9:])
-        elif "0b"+self.addr9[-12:-9] == "0b101":
-            self.ram512_5 = self.ram512_5.evaluate(_in16=self._in16, load=dmux8w[5], addr9=self.addr12[-9:])
-        elif "0b"+self.addr9[-12:-9] == "0b110":
-            self.ram512_6 = self.ram512_6.evaluate(_in16=self._in16, load=dmux8w[6], addr9=self.addr12[-9:])
-        elif "0b"+self.addr9[-12:-9] == "0b111":
-            self.ram512_7 = self.ram512_7.evaluate(_in16=self._in16, load=dmux8w[7], addr9=self.addr12[-9:])
-        else:
-            raise RuntimeError("Bad case in RAM4K: %s" % self.addr6[-12:-9])
 
-        # print("outputs:", self.ram8_0_out, self.ram8_1_out, self.ram8_2_out, self.ram8_3_out, self.ram8_4_out,
-        #       self.ram8_5_out, self.ram8_6_out, self.ram8_7_out)
+        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr12[-12:-9])
+        if "0b"+self.addr12[-12:-9] == "0b000":
+            self.ram512_0_out = self.ram512_0.evaluate(_in16=self._in16, load=dmux8w[0], addr9=self.addr12[-9:])
+        elif "0b"+self.addr12[-12:-9] == "0b001":
+            self.ram512_1_out = self.ram512_1.evaluate(_in16=self._in16, load=dmux8w[1], addr9=self.addr12[-9:])
+        elif "0b"+self.addr12[-12:-9] == "0b010":
+            self.ram512_2_out = self.ram512_2.evaluate(_in16=self._in16, load=dmux8w[2], addr9=self.addr12[-9:])
+        elif "0b"+self.addr12[-12:-9] == "0b011":
+            self.ram512_3_out = self.ram512_3.evaluate(_in16=self._in16, load=dmux8w[3], addr9=self.addr12[-9:])
+        elif "0b"+self.addr12[-12:-9] == "0b100":
+            self.ram512_4_out = self.ram512_4.evaluate(_in16=self._in16, load=dmux8w[4], addr9=self.addr12[-9:])
+        elif "0b"+self.addr12[-12:-9] == "0b101":
+            self.ram512_5_out = self.ram512_5.evaluate(_in16=self._in16, load=dmux8w[5], addr9=self.addr12[-9:])
+        elif "0b"+self.addr12[-12:-9] == "0b110":
+            self.ram512_6_out = self.ram512_6.evaluate(_in16=self._in16, load=dmux8w[6], addr9=self.addr12[-9:])
+        elif "0b"+self.addr12[-12:-9] == "0b111":
+            self.ram512_7_out = self.ram512_7.evaluate(_in16=self._in16, load=dmux8w[7], addr9=self.addr12[-9:])
+        else:
+            raise RuntimeError("Bad case in RAM4K: %s" % self.addr12[-12:-9])
+
+        # print("outputs:", self.ram512_0_out, self.ram512_1_out, self.ram512_2_out, self.ram512_3_out, self.ram512_4_out,
+        #       self.ram512_5_out, self.ram512_6_out, self.ram512_7_out)
 
         self.ram512_d_out = Mux8Way16().evaluate(
-            a16=self.ram512_0, b16=self.ram512_1, c16=self.ram512_2, d16=self.ram512_3, e16=self.ram512_4, 
-            f16=self.ram512_5, g16=self.ram512_6, h16=self.ram512_7, sel3="0b"+self.addr12[-12:-9])
+            a16=self.ram512_0_out, b16=self.ram512_1_out, c16=self.ram512_2_out, d16=self.ram512_3_out,
+            e16=self.ram512_4_out, f16=self.ram512_5_out, g16=self.ram512_6_out, h16=self.ram512_7_out,
+            sel3="0b"+self.addr12[-12:-9])
 
-        # print(self.watermark, self.d_out)
+        # print(self.watermark, self.ram512_d_out)
         return self.ram512_d_out
 
 
@@ -1291,33 +1294,41 @@ class RAM16K(Gate):
     def __init__(self, watermark=None):
         super().__init__()
         self.watermark = watermark
-        self.ram4k_0 = RAM4K()
-        self.ram4k_1 = RAM4K()
-        self.ram4k_2 = RAM4K()
-        self.ram4k_3 = RAM4K()
+        self.ram4k_0 = RAM4K(watermark="ram4k_0")
+        self.ram4k_1 = RAM4K(watermark="ram4k_1")
+        self.ram4k_2 = RAM4K(watermark="ram4k_2")
+        self.ram4k_3 = RAM4K(watermark="ram4k_3")
+        self.ram4k_0_out = "0b0000000000000000"
+        self.ram4k_1_out = "0b0000000000000000"
+        self.ram4k_2_out = "0b0000000000000000"
+        self.ram4k_3_out = "0b0000000000000000"
         self.ram4k_d_out = "0b0000000000000000"
 
     def calculate(self):
         # 2 MSB = RAM4K block, 12 LSB = RAM512>RAM64>RAM8>Register blocks
         # only evaluate selected RAM512 block (python performance optimisation)
-        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
-        dmux4w = DMux4Way().evaluate(_in=self.load, sel2="0b"+self.addr14[-14:-12])
-        if "0b"+self.addr9[-14:-12] == "0b00":
-            self.ram4k_0 = self.ram4k_0.evaluate(_in16=self._in16, load=dmux4w[0], addr9=self.addr14[-12:])
-        if "0b"+self.addr9[-12:-12] == "0b01":
-            self.ram4k_1 = self.ram4k_1.evaluate(_in16=self._in16, load=dmux4w[1], addr9=self.addr14[-12:])
-        if "0b"+self.addr9[-12:-12] == "0b10":
-            self.ram4k_2 = self.ram4k_2.evaluate(_in16=self._in16, load=dmux4w[2], addr9=self.addr14[-12:])
-        if "0b"+self.addr9[-12:-12] == "0b11":
-            self.ram4k_3 = self.ram4k_3.evaluate(_in16=self._in16, load=dmux4w[3], addr9=self.addr14[-12:])
 
-        # print("outputs:", self.ram8_0_out, self.ram8_1_out, self.ram8_2_out, self.ram8_3_out, self.ram8_4_out,
-        #       self.ram8_5_out, self.ram8_6_out, self.ram8_7_out)
+        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr14)
+
+        dmux4w = DMux4Way().evaluate(_in=self.load, sel2="0b"+self.addr14[-14:-12])
+        if "0b"+self.addr14[-14:-12] == "0b00":
+            self.ram4k_0_out = self.ram4k_0.evaluate(_in16=self._in16, load=dmux4w[0], addr12=self.addr14[-12:])
+        elif "0b"+self.addr14[-14:-12] == "0b01":
+            self.ram4k_1_out = self.ram4k_1.evaluate(_in16=self._in16, load=dmux4w[1], addr12=self.addr14[-12:])
+        elif "0b"+self.addr14[-14:-12] == "0b10":
+            self.ram4k_2_out = self.ram4k_2.evaluate(_in16=self._in16, load=dmux4w[2], addr12=self.addr14[-12:])
+        elif "0b"+self.addr14[-14:-12] == "0b11":
+            self.ram4k_3_out = self.ram4k_3.evaluate(_in16=self._in16, load=dmux4w[3], addr12=self.addr14[-12:])
+        else:
+            raise RuntimeError("Bad case in RAM16K: %s" % self.addr12[-14:-12])
+
+        # print("outputs:", self.ram4k_0_out, self.ram4k_1_out, self.ram4k_2_out, self.ram4k_3_out)
 
         self.ram4k_d_out = Mux4Way16().evaluate(
-            a16=self.ram4k_0, b16=self.ram4k_0, c16=self.ram4k_0, d16=self.ram4k_0, sel2="0b"+self.addr14[-14:-12])
+            a16=self.ram4k_0_out, b16=self.ram4k_1_out, c16=self.ram4k_2_out, d16=self.ram4k_3_out,
+            sel2="0b"+self.addr14[-14:-12])
 
-        # print(self.watermark, self.d_out)
+        # print(self.watermark, self.ram4k_d_out)
         return self.ram4k_d_out
     
 
@@ -1404,15 +1415,16 @@ def main():
     _alu = ALU()
     _dff = DFF()
     _bit = Bit()
-    _register = Register()
+    _register = Register(watermark="register_assert")
     _pc = PC()
-    _ram8 = RAM8()
+    _ram8 = RAM8(watermark="ram8_assert")
     _ram64 = RAM64(watermark="ram64_assert")
-    _ram512 = RAM512()
-    _ram4k = RAM4K()
-    _ram64k = RAM16K()
-    input_unit_test()
+    _ram512 = RAM512(watermark="ram512_assert")
+    _ram4k = RAM4K(watermark="ram4k_assert")
+    _ram16k = RAM16K(watermark="ram16k_assert")
 
+    input_unit_test()
+    '''
     # For two 1 inputs return a 1 output, else return a 1 output
     assert _nand.evaluate(a="0b1", b="0b1") == "0b0"
     assert _nand.evaluate(a="0b1", b="0b0") == "0b1"
@@ -1722,24 +1734,25 @@ def main():
     assert _ram64.evaluate(_in16="0b1010000000000000", load="0b0", addr6="0b111101") == "0b1010000000000000"
     assert _ram64.evaluate(_in16="0b1110000000000000", load="0b0", addr6="0b111110") == "0b1110000000000000"
     assert _ram64.evaluate(_in16="0b1111000000000000", load="0b0", addr6="0b111111") == "0b1111000000000000"
+    '''
+
+    # Memory of 512 registers, each 16 bit-wide # TODO: more tests
+    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b000000000") == "0b0000000000000001"
+    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b111000000") == "0b1000000000000000"
+    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b000000000") == "0b0000000000000001"
+    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b111000000") == "0b1000000000000000"
     
-    # # Memory of 512 registers, each 16 bit-wide
-    # assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b000000000") == "0b0000000000000001"
-    # assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b111000000") == "0b1000000000000000"
-    # assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b000000000") == "0b0000000000000001"
-    # assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b111000000") == "0b1000000000000000"
-    #
-    # # Memory of 4k registers, each 16 bit-wide
-    # assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b000000000000") == "0b0000000000000001"
-    # assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b111000000000") == "0b1000000000000000"
-    # assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b000000000000") == "0b0000000000000001"
-    # assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b111000000000") == "0b1000000000000000"
-    #
-    # # Memory of 16k registers, each 16 bit-wide
-    # assert _ram64k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b00000000000000") == "0b0000000000000001"
-    # assert _ram64k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b11100000000000") == "0b1000000000000000"
-    # assert _ram64k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b00000000000000") == "0b0000000000000001"
-    # assert _ram64k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b11100000000000") == "0b1000000000000000"
+    # Memory of 4k registers, each 16 bit-wide # TODO: more tests
+    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b000000000000") == "0b0000000000000001"
+    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b111000000000") == "0b1000000000000000"
+    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b000000000000") == "0b0000000000000001"
+    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b111000000000") == "0b1000000000000000"
+
+    # Memory of 16k registers, each 16 bit-wide # TODO: more tests
+    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b00000000000000") == "0b0000000000000001"
+    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b11100000000000") == "0b1000000000000000"
+    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b00000000000000") == "0b0000000000000001"
+    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b11100000000000") == "0b1000000000000000"
 
 
 if __name__ == "__main__":
