@@ -5,6 +5,7 @@ All subsequent gates can be expressed via increasingly complex abstractions of N
 """
 
 # TODO: reduce multiple instantiations of classes where not required
+# TODO: disable eval code
 
 
 class Gate(object):
@@ -40,25 +41,28 @@ class Gate(object):
         self.reset = None
         self.addr3 = None
         self.addr6 = None
-
+        self.addr9 = None
+        self.addr12 = None
+        self.addr14 = None
+        
     def evaluate(self, a=None, b=None, c=None, _in=None, sel=None, sel2=None, sel3=None, _in8=None, _in16=None,
                  a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None, x=None, y=None,
                  zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None, addr3=None,
-                 addr6=None):
+                 addr6=None, addr9=None, addr12=None, addr14=None):
         """
         validate input, None = uninitialized
         """
         # test flags
         one_bit_inputs = {"a": a, "b": b, "c": c, "_in": _in, "sel": sel, "zx": zx, "nx": nx, "zy": zy, "ny": ny,
                           "f": f, "no": no, "load": load, "inc": inc, "reset": reset}
-        
+
         for flag in one_bit_inputs:
             if one_bit_inputs[flag] is not None:
                 if type(one_bit_inputs[flag]) is not str:
                     one_bit_inputs[flag] = bin(one_bit_inputs[flag])
                 if one_bit_inputs[flag] not in ("0b0", "0b1"):
                     raise RuntimeError("%s input must be 1 bit (value was %s)" % (flag, one_bit_inputs[flag]))
-        
+
         sixteen_bit_inputs = {"_in16": _in16, "a16": a16, "b16": b16, "c16": c16, "d16": d16, "e16": e16, "f16": f16,
                               "g16": g16, "h16": h16, "x": x, "y": y}
 
@@ -95,8 +99,7 @@ class Gate(object):
         self.load = load
         self.inc = inc
         self.reset = reset
-        self.addr3 = addr3
-
+        
         if sel2 is not None:
             if type(sel2) is not str:
                 sel2 = bin(sel2)
@@ -124,7 +127,28 @@ class Gate(object):
             if int(addr6, 2) < 0 or int(addr6, 2) > 77:
                 raise RuntimeError("addr6 input must be 6 bits")
             self.addr6 = addr6
+        
+        if addr9 is not None:
+            if type(addr9) is not str:
+                addr9 = bin(addr9)
+            if int(addr9, 2) < 0 or int(addr9, 2) > 777:
+                raise RuntimeError("addr9 input must be 9 bits")
+            self.addr9 = addr9
+        
+        if addr12 is not None:
+            if type(addr12) is not str:
+                addr12 = bin(addr12)
+            if int(addr12, 2) < 0 or int(addr12, 2) > 4095:
+                raise RuntimeError("addr12 input must be 12 bits")
+            self.addr12 = addr12   
 
+        if addr14 is not None:
+            if type(addr14) is not str:
+                addr14 = bin(addr14)
+            if int(addr14, 2) < 0 or int(addr14, 2) > 16383:
+                raise RuntimeError("addr14 input must be 14 bits")
+            self.addr14 = addr14  
+            
         if _in8 is not None:
             if type(_in8) is not str:
                 _in8 = bin(_in8)
@@ -508,7 +532,7 @@ class Mux8Way16(Gate):
         return Mux16().evaluate(a16=mux4way16_ad, b16=mux4way16_eh, sel="0b"+self.sel3[-3])
 
 
-class DMux(Mux):
+class DMux(Gate):
     """
     Select one of two outputs, input passes through and unselected output is always 0
 
@@ -532,7 +556,7 @@ class DMux(Mux):
         return NandGate().evaluate(a=nand_b, b=nand_b), NandGate().evaluate(a=nand_c, b=nand_c)
 
 
-class DMux4Way(DMux):
+class DMux4Way(Gate):
     """
     With a 2 bit selector choose one of four outputs, input passes through and unselected is always 0
 
@@ -554,7 +578,7 @@ class DMux4Way(DMux):
         return dmux_1_a, dmux_1_b, dmux_2_a, dmux_2_b
 
 
-class DMux8Way(DMux):
+class DMux8Way(Gate):
     """
     With a 3 bit selector choose one of 8 outputs, input passes through and unselected is always 0
 
@@ -787,6 +811,8 @@ class DFF(Gate):
 
         s_and = AndGate().evaluate(a=self._in, b=self.load)
         r_and = AndGate().evaluate(a=self.load, b=reset)
+
+        # python can't represent simultaneous eval, this will always break and cause issues after n runs
         self.s_nor = NorGate().evaluate(a=s_and, b=self.r_nor)
         self.r_nor = NorGate().evaluate(a=self.s_nor, b=r_and)
 
@@ -815,8 +841,8 @@ class Bit(Gate):
         self.d_out = "0b0"
 
     def calculate(self):
-        m_out = Mux().evaluate(a=self.d_out, b=self._in, sel=self.load)
-        self.d_out = self.dff.evaluate(_in=m_out, load=self.load)[0]
+        m_out = Mux().evaluate(a=self.d_out, b=self._in, sel=self.load)  # load=emit previous or new
+        self.d_out = self.dff.evaluate(_in=m_out, load=self.load)[0]  # if problems replace: self.d_out = m_out
         return self.d_out
 
 
@@ -847,7 +873,7 @@ class Register(Gate):
         Bit(in=in[15], load=load, out=out[15]);
     }
     """
-    def __init__(self):
+    def __init__(self, watermark=None):
         super().__init__()
         self.bit0 = Bit()
         self.bit1 = Bit()
@@ -865,29 +891,34 @@ class Register(Gate):
         self.bit13 = Bit()
         self.bit14 = Bit()
         self.bit15 = Bit()
+        self.d_out = "0b0000000000000000"
+        self.watermark = watermark
 
     def calculate(self):
         # can't use range as Register has to save state
-        bit0 = self.bit0.evaluate(_in="0b"+self._in16[2], load=self.load)
-        bit1 = self.bit1.evaluate(_in="0b"+self._in16[3], load=self.load)
-        bit2 = self.bit2.evaluate(_in="0b"+self._in16[4], load=self.load)
-        bit3 = self.bit3.evaluate(_in="0b"+self._in16[5], load=self.load)
-        bit4 = self.bit4.evaluate(_in="0b"+self._in16[6], load=self.load)
-        bit5 = self.bit5.evaluate(_in="0b"+self._in16[7], load=self.load)
-        bit6 = self.bit6.evaluate(_in="0b"+self._in16[8], load=self.load)
-        bit7 = self.bit7.evaluate(_in="0b"+self._in16[9], load=self.load)
-        bit8 = self.bit8.evaluate(_in="0b"+self._in16[10], load=self.load)
-        bit9 = self.bit9.evaluate(_in="0b"+self._in16[11], load=self.load)
-        bit10 = self.bit10.evaluate(_in="0b"+self._in16[12], load=self.load)
-        bit11 = self.bit11.evaluate(_in="0b"+self._in16[13], load=self.load)
-        bit12 = self.bit12.evaluate(_in="0b"+self._in16[14], load=self.load)
-        bit13 = self.bit13.evaluate(_in="0b"+self._in16[15], load=self.load)
-        bit14 = self.bit14.evaluate(_in="0b"+self._in16[16], load=self.load)
-        bit15 = self.bit15.evaluate(_in="0b"+self._in16[17], load=self.load)
-
-        return "0b" + bit0[2:] + bit1[2:] + bit2[2:] + bit3[2:] + bit4[2:] + bit5[2:] \
-               + bit6[2:] + bit7[2:] + bit8[2:] + bit9[2:] + bit10[2:] + bit11[2:] \
-               + bit12[2:] + bit13[2:] + bit14[2:] + bit15[2:]
+        # if self.load == "0b1":  # only update Bit on load=1 (python performance optimisation)
+        self.bit0.evaluate(_in="0b"+self._in16[2], load=self.load)
+        self.bit1.evaluate(_in="0b"+self._in16[3], load=self.load)
+        self.bit2.evaluate(_in="0b"+self._in16[4], load=self.load)
+        self.bit3.evaluate(_in="0b"+self._in16[5], load=self.load)
+        self.bit4.evaluate(_in="0b"+self._in16[6], load=self.load)
+        self.bit5.evaluate(_in="0b"+self._in16[7], load=self.load)
+        self.bit6.evaluate(_in="0b"+self._in16[8], load=self.load)
+        self.bit7.evaluate(_in="0b"+self._in16[9], load=self.load)
+        self.bit8.evaluate(_in="0b"+self._in16[10], load=self.load)
+        self.bit9.evaluate(_in="0b"+self._in16[11], load=self.load)
+        self.bit10.evaluate(_in="0b"+self._in16[12], load=self.load)
+        self.bit11.evaluate(_in="0b"+self._in16[13], load=self.load)
+        self.bit12.evaluate(_in="0b"+self._in16[14], load=self.load)
+        self.bit13.evaluate(_in="0b"+self._in16[15], load=self.load)
+        self.bit14.evaluate(_in="0b"+self._in16[16], load=self.load)
+        self.bit15.evaluate(_in="0b"+self._in16[17], load=self.load)
+        self.d_out = "0b" + self.bit0.d_out[2:] + self.bit1.d_out[2:] + self.bit2.d_out[2:] + self.bit3.d_out[2:] \
+                     + self.bit4.d_out[2:] + self.bit5.d_out[2:] + self.bit6.d_out[2:] + self.bit7.d_out[2:] \
+                     + self.bit8.d_out[2:] + self.bit9.d_out[2:] + self.bit10.d_out[2:] + self.bit11.d_out[2:] \
+                     + self.bit12.d_out[2:] + self.bit13.d_out[2:] + self.bit14.d_out[2:] + self.bit15.d_out[2:]
+        # print(self.watermark, self.d_out)
+        return self.d_out
 
 
 class PC(Gate):
@@ -947,29 +978,54 @@ class RAM8(Gate):
         Mux8Way16(a=r0Out, b=r1Out, c=r2Out, d=r3Out, e=r4Out, f=r5Out, g=r6Out, h=r7Out, sel=address, out=out);
     }
     """
-    def __init__(self):
+    def __init__(self, watermark=None):
         super().__init__()
-        self.r0 = Register()
-        self.r1 = Register()
-        self.r2 = Register()
-        self.r3 = Register()
-        self.r4 = Register()
-        self.r5 = Register()
-        self.r6 = Register()
-        self.r7 = Register()
+        self.watermark = watermark
+        self.r0 = Register(watermark="r0")
+        self.r1 = Register(watermark="r1")
+        self.r2 = Register(watermark="r2")
+        self.r3 = Register(watermark="r3")
+        self.r4 = Register(watermark="r4")
+        self.r5 = Register(watermark="r5")
+        self.r6 = Register(watermark="r6")
+        self.r7 = Register(watermark="r7")
+        self.r0_out = "0b0000000000000000"
+        self.r1_out = "0b0000000000000000"
+        self.r2_out = "0b0000000000000000"
+        self.r3_out = "0b0000000000000000"
+        self.r4_out = "0b0000000000000000"
+        self.r5_out = "0b0000000000000000"
+        self.r6_out = "0b0000000000000000"
+        self.r7_out = "0b0000000000000000"
+        self.d_out = "0b0000000000000000"
 
     def calculate(self):
         dmux8w = DMux8Way().evaluate(_in=self.load, sel3=self.addr3)
-        r0 = self.r0.evaluate(_in16=self._in16, load=dmux8w[0])
-        r1 = self.r1.evaluate(_in16=self._in16, load=dmux8w[1])
-        r2 = self.r2.evaluate(_in16=self._in16, load=dmux8w[2])
-        r3 = self.r3.evaluate(_in16=self._in16, load=dmux8w[3])
-        r4 = self.r4.evaluate(_in16=self._in16, load=dmux8w[4])
-        r5 = self.r5.evaluate(_in16=self._in16, load=dmux8w[5])
-        r6 = self.r6.evaluate(_in16=self._in16, load=dmux8w[6])
-        r7 = self.r7.evaluate(_in16=self._in16, load=dmux8w[7])
-        # print("class", r0, r1, r2, r3, r4, r5, r6, r7)
-        return Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7, sel3=self.addr3)
+        # only evaluate selected Register (python performance optimisation)
+        if self.addr3 == "0b000":
+            self.r0_out = self.r0.evaluate(_in16=self._in16, load=dmux8w[0])
+        elif self.addr3 == "0b001":
+            self.r1_out = self.r1.evaluate(_in16=self._in16, load=dmux8w[1])
+        elif self.addr3 == "0b010":
+            self.r2_out = self.r2.evaluate(_in16=self._in16, load=dmux8w[2])
+        elif self.addr3 == "0b011":
+            self.r3_out = self.r3.evaluate(_in16=self._in16, load=dmux8w[3])
+        elif self.addr3 == "0b100":
+            self.r4_out = self.r4.evaluate(_in16=self._in16, load=dmux8w[4])
+        elif self.addr3 == "0b101":
+            self.r5_out = self.r5.evaluate(_in16=self._in16, load=dmux8w[5])
+        elif self.addr3 == "0b110":
+            self.r6_out = self.r6.evaluate(_in16=self._in16, load=dmux8w[6])
+        elif self.addr3 == "0b111":
+            self.r7_out = self.r7.evaluate(_in16=self._in16, load=dmux8w[7])
+        else:
+            raise RuntimeError("Bad case in RAM8: %s" % self.addr3)
+
+        self.d_out = Mux8Way16().evaluate(a16=self.r0_out, b16=self.r1_out, c16=self.r2_out, d16=self.r3_out,
+                                          e16=self.r4_out, f16=self.r5_out, g16=self.r6_out, h16=self.r7_out,
+                                          sel3=self.addr3)
+        # print(self.watermark, self.d_out)
+        return self.d_out
 
 
 class RAM64(Gate):
@@ -995,31 +1051,204 @@ class RAM64(Gate):
         Mux8Way16(a=r0Out, b=r1Out, c=r2Out, d=r3Out, e=r4Out, f=r5Out, g=r6Out, h=r7Out, sel=address[0..2], out=out);
     }
     """
-    def __init__(self):
+    def __init__(self, watermark=None):
         super().__init__()
-        self.r0 = RAM8()
-        self.r1 = RAM8()
-        self.r2 = RAM8()
-        self.r3 = RAM8()
-        self.r4 = RAM8()
-        self.r5 = RAM8()
-        self.r6 = RAM8()
-        self.r7 = RAM8()
+        self.watermark = watermark
+        self.ram8_0 = RAM8(watermark="ram8_0")
+        self.ram8_1 = RAM8(watermark="ram8_1")
+        self.ram8_2 = RAM8(watermark="ram8_2")
+        self.ram8_3 = RAM8(watermark="ram8_3")
+        self.ram8_4 = RAM8(watermark="ram8_4")
+        self.ram8_5 = RAM8(watermark="ram8_5")
+        self.ram8_6 = RAM8(watermark="ram8_6")
+        self.ram8_7 = RAM8(watermark="ram8_7")
+        self.ram8_0_out = "0b0000000000000000"
+        self.ram8_1_out = "0b0000000000000000"
+        self.ram8_2_out = "0b0000000000000000"
+        self.ram8_3_out = "0b0000000000000000"
+        self.ram8_4_out = "0b0000000000000000"
+        self.ram8_5_out = "0b0000000000000000"
+        self.ram8_6_out = "0b0000000000000000"
+        self.ram8_7_out = "0b0000000000000000"
+        self.ram8_d_out = "0b0000000000000000"
 
     def calculate(self):
-        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr6[-3:])
-        r0 = self.r0.evaluate(_in16=self._in16, load=dmux8w[0], addr3=self.addr6[:-3])
-        r1 = self.r1.evaluate(_in16=self._in16, load=dmux8w[1], addr3=self.addr6[:-3])
-        r2 = self.r2.evaluate(_in16=self._in16, load=dmux8w[2], addr3=self.addr6[:-3])
-        r3 = self.r3.evaluate(_in16=self._in16, load=dmux8w[3], addr3=self.addr6[:-3])
-        r4 = self.r4.evaluate(_in16=self._in16, load=dmux8w[4], addr3=self.addr6[:-3])
-        r5 = self.r5.evaluate(_in16=self._in16, load=dmux8w[5], addr3=self.addr6[:-3])
-        r6 = self.r6.evaluate(_in16=self._in16, load=dmux8w[6], addr3=self.addr6[:-3])
-        r7 = self.r7.evaluate(_in16=self._in16, load=dmux8w[7], addr3=self.addr6[:-3])
-        print("class", r0, r1, r2, r3, r4, r5, r6, r7)
-        return Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7,
-                                    sel3="0b"+self.addr6[-3:])
+        # only evaluate selected RAM8 (python performance optimisation)
+        # 3 MSB = RAM8 block, 3 LSB = Register
+        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr6[-6:-3])
+        if "0b"+self.addr6[-6:-3] == "0b000":
+            self.ram8_0_out = self.ram8_0.evaluate(_in16=self._in16, load=dmux8w[0], addr3="0b"+self.addr6[-3:])
+        elif "0b"+self.addr6[-6:-3] == "0b001":
+            self.ram8_1_out = self.ram8_1.evaluate(_in16=self._in16, load=dmux8w[1], addr3="0b"+self.addr6[-3:])
+        elif "0b"+self.addr6[-6:-3] == "0b010":
+            self.ram8_2_out = self.ram8_2.evaluate(_in16=self._in16, load=dmux8w[2], addr3="0b"+self.addr6[-3:])
+        elif "0b"+self.addr6[-6:-3] == "0b011":
+            self.ram8_3_out = self.ram8_3.evaluate(_in16=self._in16, load=dmux8w[3], addr3="0b"+self.addr6[-3:])
+        elif "0b"+self.addr6[-6:-3] == "0b100":
+            self.ram8_4_out = self.ram8_4.evaluate(_in16=self._in16, load=dmux8w[4], addr3="0b"+self.addr6[-3:])
+        elif "0b"+self.addr6[-6:-3] == "0b101":
+            self.ram8_5_out = self.ram8_5.evaluate(_in16=self._in16, load=dmux8w[5], addr3="0b"+self.addr6[-3:])
+        elif "0b"+self.addr6[-6:-3] == "0b110":
+            self.ram8_6_out = self.ram8_6.evaluate(_in16=self._in16, load=dmux8w[6], addr3="0b"+self.addr6[-3:])
+        elif "0b"+self.addr6[-6:-3] == "0b111":
+            self.ram8_7_out = self.ram8_7.evaluate(_in16=self._in16, load=dmux8w[7], addr3="0b"+self.addr6[-3:])
+        else:
+            raise RuntimeError("Bad case in RAM64: %s" % self.addr6[-6:-3])
 
+        # print("outputs:", self.ram8_0_out, self.ram8_1_out, self.ram8_2_out, self.ram8_3_out, self.ram8_4_out,
+        #       self.ram8_5_out, self.ram8_6_out, self.ram8_7_out)
+
+        self.ram8_d_out = Mux8Way16().evaluate(
+            a16=self.ram8_0_out, b16=self.ram8_1_out, c16=self.ram8_2_out, d16=self.ram8_3_out, e16=self.ram8_4_out,
+            f16=self.ram8_5_out, g16=self.ram8_6_out, h16=self.ram8_7_out, sel3="0b"+self.addr6[-6:-3])
+
+        # print("result:", self.ram8_d_out)
+        return self.ram8_d_out
+
+
+class RAM512(Gate):
+    """
+    Memory of 512 registers, each 16 bit-wide.
+    Out holds the value stored at the memory location specified by address.
+    If load==1, then the in value is loaded into the memory location specified by address
+
+    CHIP RAM512 {
+        IN in[16], load, address[9];
+        OUT out[16];
+
+    PARTS:
+        DMux8Way(in=load, sel=address[0..2], a=r0, b=r1, c=r2, d=r3, e=r4, f=r5, g=r6, h=r7);
+        RAM64(in=in, load=r0, address=address[3..8], out=r0out);
+        RAM64(in=in, load=r1, address=address[3..8], out=r1out);
+        RAM64(in=in, load=r2, address=address[3..8], out=r2out);
+        RAM64(in=in, load=r3, address=address[3..8], out=r3out);
+        RAM64(in=in, load=r4, address=address[3..8], out=r4out);
+        RAM64(in=in, load=r5, address=address[3..8], out=r5out);
+        RAM64(in=in, load=r6, address=address[3..8], out=r6out);
+        RAM64(in=in, load=r7, address=address[3..8], out=r7out);
+        Mux8Way16(a=r0out, b=r1out, c=r2out, d=r3out, e=r4out, f=r5out, g=r6out, h=r7out, sel=address[0..2], out=out);
+    }
+    """
+    def __init__(self):
+        super().__init__()
+        self.r0 = RAM64()
+        self.r1 = RAM64()
+        self.r2 = RAM64()
+        self.r3 = RAM64()
+        self.r4 = RAM64()
+        self.r5 = RAM64()
+        self.r6 = RAM64()
+        self.r7 = RAM64()
+        self.d_out = "0b0000000000000000"
+
+    def calculate(self):
+        if self.load == "0b1":  # only update on load=1 (python performance optimisation)
+            dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr9[-6:])
+            r0 = self.r0.evaluate(_in16=self._in16, load=dmux8w[0], addr6="0b"+self.addr9[:-3])
+            r1 = self.r1.evaluate(_in16=self._in16, load=dmux8w[1], addr6="0b"+self.addr9[:-3])
+            r2 = self.r2.evaluate(_in16=self._in16, load=dmux8w[2], addr6="0b"+self.addr9[:-3])
+            r3 = self.r3.evaluate(_in16=self._in16, load=dmux8w[3], addr6="0b"+self.addr9[:-3])
+            r4 = self.r4.evaluate(_in16=self._in16, load=dmux8w[4], addr6="0b"+self.addr9[:-3])
+            r5 = self.r5.evaluate(_in16=self._in16, load=dmux8w[5], addr6="0b"+self.addr9[:-3])
+            r6 = self.r6.evaluate(_in16=self._in16, load=dmux8w[6], addr6="0b"+self.addr9[:-3])
+            r7 = self.r7.evaluate(_in16=self._in16, load=dmux8w[7], addr6="0b"+self.addr9[:-3])
+            # print("class", r0, r1, r2, r3, r4, r5, r6, r7)
+            self.d_out = Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7,
+                                              sel3="0b"+self.addr9[-6:])
+        return self.d_out
+
+
+class RAM4K(Gate):
+    """
+    Memory of 4k registers, each 16 bit-wide.
+    Out holds the value stored at the memory location specified by address.
+    If load==1, then the in value is loaded into the memory location specified by address
+
+    CHIP RAM4K {
+        IN in[16], load, address[12];
+        OUT out[16];
+    
+    PARTS:
+        DMux8Way(in=load, sel=address[0..2], a=r0, b=r1, c=r2, d=r3, e=r4, f=r5, g=r6, h=r7);
+        RAM512(in=in, load=r0, address=address[3..11], out=r0out);
+        RAM512(in=in, load=r1, address=address[3..11], out=r1out);
+        RAM512(in=in, load=r2, address=address[3..11], out=r2out);
+        RAM512(in=in, load=r3, address=address[3..11], out=r3out);
+        RAM512(in=in, load=r4, address=address[3..11], out=r4out);
+        RAM512(in=in, load=r5, address=address[3..11], out=r5out);
+        RAM512(in=in, load=r6, address=address[3..11], out=r6out);
+        RAM512(in=in, load=r7, address=address[3..11], out=r7out);
+        Mux8Way16(a=r0out, b=r1out, c=r2out, d=r3out, e=r4out, f=r5out, g=r6out, h=r7out, sel=address[0..2], out=out);
+    }
+    """
+    def __init__(self):
+        super().__init__()
+        self.r0 = RAM512()
+        self.r1 = RAM512()
+        self.r2 = RAM512()
+        self.r3 = RAM512()
+        self.r4 = RAM512()
+        self.r5 = RAM512()
+        self.r6 = RAM512()
+        self.r7 = RAM512()
+        self.d_out = "0b0000000000000000"
+
+    def calculate(self):
+        if self.load == "0b1":  # only update on load=1 (python performance optimisation)
+            dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr12[-9:])
+            r0 = self.r0.evaluate(_in16=self._in16, load=dmux8w[0], addr9=self.addr12[:-3])
+            r1 = self.r1.evaluate(_in16=self._in16, load=dmux8w[1], addr9=self.addr12[:-3])
+            r2 = self.r2.evaluate(_in16=self._in16, load=dmux8w[2], addr9=self.addr12[:-3])
+            r3 = self.r3.evaluate(_in16=self._in16, load=dmux8w[3], addr9=self.addr12[:-3])
+            r4 = self.r4.evaluate(_in16=self._in16, load=dmux8w[4], addr9=self.addr12[:-3])
+            r5 = self.r5.evaluate(_in16=self._in16, load=dmux8w[5], addr9=self.addr12[:-3])
+            r6 = self.r6.evaluate(_in16=self._in16, load=dmux8w[6], addr9=self.addr12[:-3])
+            r7 = self.r7.evaluate(_in16=self._in16, load=dmux8w[7], addr9=self.addr12[:-3])
+            # print("class", r0, r1, r2, r3, r4, r5, r6, r7)
+            self.d_out = Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7,
+                                              sel3="0b"+self.addr12[-9:])
+        return self.d_out
+
+
+class RAM16K(Gate):
+    """
+    Memory of 16k registers, each 16 bit-wide.
+    Out holds the value stored at the memory location specified by address.
+    If load==1, then the in value is loaded into the memory location specified by address
+
+    CHIP RAM16K {
+        IN in[16], load, address[14];
+        OUT out[16];
+    
+    PARTS:
+        DMux4Way(in=load, sel=address[0..1], a=r0, b=r1, c=r2, d=r3);
+        RAM4K(in=in, load=r0, address=address[2..13], out=r0out);
+        RAM4K(in=in, load=r1, address=address[2..13], out=r1out);
+        RAM4K(in=in, load=r2, address=address[2..13], out=r2out);
+        RAM4K(in=in, load=r3, address=address[2..13], out=r3out);
+        Mux4Way16(a=r0out, b=r1out, c=r2out, d=r3out, sel=address[0..1], out=out);
+    }
+    """
+    def __init__(self):
+        super().__init__()
+        self.r0 = RAM4K()
+        self.r1 = RAM4K()
+        self.r2 = RAM4K()
+        self.r3 = RAM4K()
+        self.d_out = "0b0000000000000000"
+
+    def calculate(self):
+        if self.load == "0b1":  # only update on load=1 (python performance optimisation)
+            dmux4w = DMux4Way().evaluate(_in=self.load, sel2="0b"+self.addr14[-9:])
+            r0 = self.r0.evaluate(_in16=self._in16, load=dmux4w[0], addr9=self.addr14[:-3])
+            r1 = self.r1.evaluate(_in16=self._in16, load=dmux4w[1], addr9=self.addr14[:-3])
+            r2 = self.r2.evaluate(_in16=self._in16, load=dmux4w[2], addr9=self.addr14[:-3])
+            r3 = self.r3.evaluate(_in16=self._in16, load=dmux4w[3], addr9=self.addr14[:-3])
+            # print("class", r0, r1, r2, r3)
+            Mux4Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, sel2="0b"+self.addr14[-9:])
+        return self.d_out
+    
 
 def input_unit_test():
     """
@@ -1107,8 +1336,10 @@ def main():
     _register = Register()
     _pc = PC()
     _ram8 = RAM8()
-    _ram64 = RAM64()
-
+    _ram64 = RAM64(watermark="ram64_assert")
+    _ram512 = RAM512()
+    _ram4k = RAM4K()
+    _ram64k = RAM16K()
     input_unit_test()
 
     # For two 1 inputs return a 1 output, else return a 1 output
@@ -1228,7 +1459,7 @@ def main():
     assert _dmux4way.evaluate(_in="0b1", sel2="0b01") == ("0b0", "0b1", "0b0", "0b0")
     assert _dmux4way.evaluate(_in="0b1", sel2="0b10") == ("0b0", "0b0", "0b1", "0b0")
     assert _dmux4way.evaluate(_in="0b1", sel2="0b11") == ("0b0", "0b0", "0b0", "0b1")
-    
+
     # With a 3 bit selector choose one of 8 outputs, input passes through and unselected is always 0
     assert _dmux8way.evaluate(_in="0b0", sel3="0b000") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
     assert _dmux8way.evaluate(_in="0b0", sel3="0b001") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
@@ -1343,17 +1574,101 @@ def main():
     assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b1", reset="0b1") == "0b0000000000000000"
     assert _pc.evaluate(_in16="0b0000000000000100", load="0b1", inc="0b1", reset="0b0") == "0b0000000000000100"
 
-    # Memory of 8 registers, each 16 bit-wide
-    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b1", addr3="0b000") == "0b0000000000000001"
-    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b1", addr3="0b111") == "0b1000000000000000"
-    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b000") == "0b0000000000000001"
-    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b111") == "0b1000000000000000"
+    # RAM8: sequential set
+    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b1", addr3="0b000") == "0b0000000000000000"
+    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b1", addr3="0b001") == "0b0000000000000001"
+    assert _ram8.evaluate(_in16="0b0000000000000010", load="0b1", addr3="0b010") == "0b0000000000000010"
+    assert _ram8.evaluate(_in16="0b0000000000000011", load="0b1", addr3="0b011") == "0b0000000000000011"
+    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b1", addr3="0b100") == "0b1000000000000000"
+    assert _ram8.evaluate(_in16="0b1010000000000000", load="0b1", addr3="0b101") == "0b1010000000000000"
+    assert _ram8.evaluate(_in16="0b1100000000000000", load="0b1", addr3="0b110") == "0b1100000000000000"
+    assert _ram8.evaluate(_in16="0b1110000000000000", load="0b1", addr3="0b111") == "0b1110000000000000"
 
-    # Memory of 64 registers, each 16 bit-wide
-    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b1", addr6="0b000000") == "0b0000000000000001"
-    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b1", addr6="0b000111") == "0b1000000000000000"
-    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b000000") == "0b0000000000000001"
-    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b000111") == "0b1000000000000000"
+    # RAM8: sequential load
+    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b000") == "0b0000000000000000"
+    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b0", addr3="0b001") == "0b0000000000000001"
+    assert _ram8.evaluate(_in16="0b0000000000000010", load="0b0", addr3="0b010") == "0b0000000000000010"
+    assert _ram8.evaluate(_in16="0b0000000000000011", load="0b0", addr3="0b011") == "0b0000000000000011"
+    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b0", addr3="0b100") == "0b1000000000000000"
+    assert _ram8.evaluate(_in16="0b1010000000000000", load="0b0", addr3="0b101") == "0b1010000000000000"
+    assert _ram8.evaluate(_in16="0b1100000000000000", load="0b0", addr3="0b110") == "0b1100000000000000"
+    assert _ram8.evaluate(_in16="0b1110000000000000", load="0b0", addr3="0b111") == "0b1110000000000000"
+
+    # RAM8: mixed load/set
+    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b1", addr3="0b000") == "0b0000000000000000"
+    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b1", addr3="0b001") == "0b0000000000000001"
+    assert _ram8.evaluate(_in16="0b0000000000000010", load="0b1", addr3="0b010") == "0b0000000000000010"
+    assert _ram8.evaluate(_in16="0b0000000000000011", load="0b1", addr3="0b011") == "0b0000000000000011"
+    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b000") == "0b0000000000000000"
+    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b0", addr3="0b001") == "0b0000000000000001"
+    assert _ram8.evaluate(_in16="0b0000000000000010", load="0b0", addr3="0b010") == "0b0000000000000010"
+    assert _ram8.evaluate(_in16="0b0000000000000011", load="0b0", addr3="0b011") == "0b0000000000000011"
+    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b1", addr3="0b100") == "0b1000000000000000"
+    assert _ram8.evaluate(_in16="0b1010000000000000", load="0b1", addr3="0b101") == "0b1010000000000000"
+    assert _ram8.evaluate(_in16="0b1100000000000000", load="0b1", addr3="0b110") == "0b1100000000000000"
+    assert _ram8.evaluate(_in16="0b1110000000000000", load="0b1", addr3="0b111") == "0b1110000000000000"
+    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b0", addr3="0b100") == "0b1000000000000000"
+    assert _ram8.evaluate(_in16="0b1010000000000000", load="0b0", addr3="0b101") == "0b1010000000000000"
+    assert _ram8.evaluate(_in16="0b1100000000000000", load="0b0", addr3="0b110") == "0b1100000000000000"
+    assert _ram8.evaluate(_in16="0b1110000000000000", load="0b0", addr3="0b111") == "0b1110000000000000"
+
+    # RAM64: sequential set (000/XXX)
+    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b1", addr6="0b000000") == "0b0000000000000000"
+    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b1", addr6="0b000001") == "0b0000000000000001"
+    assert _ram64.evaluate(_in16="0b0000000000000010", load="0b1", addr6="0b000010") == "0b0000000000000010"
+    assert _ram64.evaluate(_in16="0b0000000000000011", load="0b1", addr6="0b000011") == "0b0000000000000011"
+    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b1", addr6="0b000100") == "0b1000000000000000"
+    assert _ram64.evaluate(_in16="0b1010000000000000", load="0b1", addr6="0b000101") == "0b1010000000000000"
+    assert _ram64.evaluate(_in16="0b1110000000000000", load="0b1", addr6="0b000110") == "0b1110000000000000"
+    assert _ram64.evaluate(_in16="0b1111000000000000", load="0b1", addr6="0b000111") == "0b1111000000000000"
+
+    # RAM64: sequential set (111/XXX)
+    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b1", addr6="0b111000") == "0b0000000000000000"
+    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b1", addr6="0b111001") == "0b0000000000000001"
+    assert _ram64.evaluate(_in16="0b0000000000000010", load="0b1", addr6="0b111010") == "0b0000000000000010"
+    assert _ram64.evaluate(_in16="0b0000000000000011", load="0b1", addr6="0b111011") == "0b0000000000000011"
+    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b1", addr6="0b111100") == "0b1000000000000000"
+    assert _ram64.evaluate(_in16="0b1010000000000000", load="0b1", addr6="0b111101") == "0b1010000000000000"
+    assert _ram64.evaluate(_in16="0b1110000000000000", load="0b1", addr6="0b111110") == "0b1110000000000000"
+    assert _ram64.evaluate(_in16="0b1111000000000000", load="0b1", addr6="0b111111") == "0b1111000000000000"
+
+    # RAM64: sequential load (000/XXX)
+    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b000000") == "0b0000000000000000"
+    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b0", addr6="0b000001") == "0b0000000000000001"
+    assert _ram64.evaluate(_in16="0b0000000000000010", load="0b0", addr6="0b000010") == "0b0000000000000010"
+    assert _ram64.evaluate(_in16="0b0000000000000011", load="0b0", addr6="0b000011") == "0b0000000000000011"
+    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b0", addr6="0b000100") == "0b1000000000000000"
+    assert _ram64.evaluate(_in16="0b1010000000000000", load="0b0", addr6="0b000101") == "0b1010000000000000"
+    assert _ram64.evaluate(_in16="0b1110000000000000", load="0b0", addr6="0b000110") == "0b1110000000000000"
+    assert _ram64.evaluate(_in16="0b1111000000000000", load="0b0", addr6="0b000111") == "0b1111000000000000"
+
+    # RAM64: sequential load (111/XXX)
+    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b111000") == "0b0000000000000000"
+    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b0", addr6="0b111001") == "0b0000000000000001"
+    assert _ram64.evaluate(_in16="0b0000000000000010", load="0b0", addr6="0b111010") == "0b0000000000000010"
+    assert _ram64.evaluate(_in16="0b0000000000000011", load="0b0", addr6="0b111011") == "0b0000000000000011"
+    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b0", addr6="0b111100") == "0b1000000000000000"
+    assert _ram64.evaluate(_in16="0b1010000000000000", load="0b0", addr6="0b111101") == "0b1010000000000000"
+    assert _ram64.evaluate(_in16="0b1110000000000000", load="0b0", addr6="0b111110") == "0b1110000000000000"
+    assert _ram64.evaluate(_in16="0b1111000000000000", load="0b0", addr6="0b111111") == "0b1111000000000000"
+    
+    # # Memory of 512 registers, each 16 bit-wide
+    # assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b000000000") == "0b0000000000000001"
+    # assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b111000000") == "0b1000000000000000"
+    # assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b000000000") == "0b0000000000000001"
+    # assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b111000000") == "0b1000000000000000"
+    #
+    # # Memory of 4k registers, each 16 bit-wide
+    # assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b000000000000") == "0b0000000000000001"
+    # assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b111000000000") == "0b1000000000000000"
+    # assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b000000000000") == "0b0000000000000001"
+    # assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b111000000000") == "0b1000000000000000"
+    #
+    # # Memory of 16k registers, each 16 bit-wide
+    # assert _ram64k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b00000000000000") == "0b0000000000000001"
+    # assert _ram64k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b11100000000000") == "0b1000000000000000"
+    # assert _ram64k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b00000000000000") == "0b0000000000000001"
+    # assert _ram64k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b11100000000000") == "0b1000000000000000"
 
 
 if __name__ == "__main__":
