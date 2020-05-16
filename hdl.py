@@ -1391,6 +1391,26 @@ class DMux3(Gate):
         return ("0b" + a2 + a1 + a0), ("0b" + b2 + b1 + b0)
 
 
+class Dmux4Way3(Gate):
+    """
+    2 x 3 bit inputs, 2 bit select, 4 x 3 bit outputs
+    CHIP DMux4Way3 {
+        IN in[3], sel[2];
+        OUT a[3], b[3], c[3], d[3];
+
+        PARTS:
+        DMux3(in=in, sel=sel[1], a=dIn0, b=dIn1);
+        DMux3(in=dIn0, sel=sel[0], a=a, b=b);
+        DMux3(in=dIn1, sel=sel[0], a=c, b=d);
+    }
+    """
+    def calculate(self):
+        dmux3_0a, dmux3_0b = DMux3().evaluate(_in3=self._in3, sel="0b"+self.sel2[-2])
+        dmux3_1a, dmux3_1b = DMux3().evaluate(_in3=dmux3_0a, sel="0b"+self.sel2[-1])
+        dmux3_2a, dmux3_2b = DMux3().evaluate(_in3=dmux3_0b, sel="0b"+self.sel2[-1])
+        return dmux3_1a, dmux3_1b, dmux3_2a, dmux3_2b
+
+
 def input_unit_test():
     """
     Test input sizes: catch RuntimeException(s)
@@ -1468,6 +1488,7 @@ def main(test_all=False):
         _dmux = DMux()
         _dmux3 = DMux3()
         _dmux4way = DMux4Way()
+        _dmux4way3 = Dmux4Way3()
         _dmux8way = DMux8Way()
         _halfAdder = HalfAdder()
         _fullAdder = FullAdder()
@@ -1925,7 +1946,6 @@ def main(test_all=False):
         assert _dmux3.evaluate(_in3="0b101", sel="0b0") == ("0b101", "0b000")
         assert _dmux3.evaluate(_in3="0b110", sel="0b0") == ("0b110", "0b000")
         assert _dmux3.evaluate(_in3="0b111", sel="0b0") == ("0b111", "0b000")
-
         assert _dmux3.evaluate(_in3="0b000", sel="0b1") == ("0b000", "0b000")
         assert _dmux3.evaluate(_in3="0b001", sel="0b1") == ("0b000", "0b001")
         assert _dmux3.evaluate(_in3="0b010", sel="0b1") == ("0b000", "0b010")
@@ -1934,6 +1954,16 @@ def main(test_all=False):
         assert _dmux3.evaluate(_in3="0b101", sel="0b1") == ("0b000", "0b101")
         assert _dmux3.evaluate(_in3="0b110", sel="0b1") == ("0b000", "0b110")
         assert _dmux3.evaluate(_in3="0b111", sel="0b1") == ("0b000", "0b111")
+
+        # 2 x 3 bit inputs, 2 bit select, 4 x 3 bit outputs
+        assert _dmux4way3.evaluate(_in3="0b000", sel2="0b00") == ("0b000", "0b000", "0b000", "0b000")
+        assert _dmux4way3.evaluate(_in3="0b000", sel2="0b00") == ("0b000", "0b000", "0b000", "0b000")
+        assert _dmux4way3.evaluate(_in3="0b000", sel2="0b00") == ("0b000", "0b000", "0b000", "0b000")
+        assert _dmux4way3.evaluate(_in3="0b000", sel2="0b00") == ("0b000", "0b000", "0b000", "0b000")
+        assert _dmux4way3.evaluate(_in3="0b111", sel2="0b00") == ("0b111", "0b000", "0b000", "0b000")
+        assert _dmux4way3.evaluate(_in3="0b111", sel2="0b01") == ("0b000", "0b111", "0b000", "0b000")
+        assert _dmux4way3.evaluate(_in3="0b111", sel2="0b10") == ("0b000", "0b000", "0b111", "0b000")
+        assert _dmux4way3.evaluate(_in3="0b111", sel2="0b11") == ("0b000", "0b000", "0b000", "0b111")
 
 
 if __name__ == "__main__":
