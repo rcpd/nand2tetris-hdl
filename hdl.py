@@ -15,6 +15,7 @@ class Gate(object):
         self.b = None
         self.c = None
         self._in = None
+        self._in3 = None
         self.sel = None
         self.sel2 = None
         self.sel3 = None
@@ -45,10 +46,10 @@ class Gate(object):
         self.addr12 = None
         self.addr14 = None
         
-    def evaluate(self, a=None, b=None, c=None, _in=None, sel=None, sel2=None, sel3=None, _in8=None, _in16=None,
-                 a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None, x=None, y=None,
-                 zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None, addr3=None,
-                 addr6=None, addr9=None, addr12=None, addr14=None):
+    def evaluate(self, a=None, b=None, c=None, _in=None, _in3=None, sel=None, sel2=None, sel3=None, _in8=None, 
+                 _in16=None, a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None, x=None, 
+                 y=None, zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None, 
+                 addr3=None, addr6=None, addr9=None, addr12=None, addr14=None):
         """
         validate input, None = uninitialized
         """
@@ -113,6 +114,13 @@ class Gate(object):
             if int(sel3, 2) < 0 or int(sel3, 2) > 7:
                 raise RuntimeError("sel3 input must be 3 bits")
             self.sel3 = sel3
+        
+        if _in3 is not None:
+            if type(_in3) is not str:
+                _in3 = bin(_in3)
+            if int(_in3, 2) < 0 or int(_in3, 2) > 7:
+                raise RuntimeError("_in3 input must be 3 bits")
+            self._in3 = _in3
         
         if addr3 is not None:
             if type(addr3) is not str:
@@ -1330,7 +1338,58 @@ class RAM16K(Gate):
 
         # print(self.watermark, self.ram4k_d_out)
         return self.ram4k_d_out
-    
+
+
+class DMux3(Gate):
+    """
+    3 bit input, 1 bit select, 2 x 3 bit output dmux
+    CHIP DMux3 {
+        IN in[3], sel;
+        OUT a[3], b[3];
+
+    PARTS:
+        //dmux1
+        Nand(a=sel, b=sel, out=aNand1);
+        Nand(a=in[0], b=aNand1, out=bNand1);
+        Nand(a=sel, b=in[0], out=cNand1);
+        Nand(a=bNand1, b=bNand1, out=a[0]);
+        Nand(a=cNand1, b=cNand1, out=b[0]);
+        //dmux2
+        Nand(a=sel, b=sel, out=aNand2);
+        Nand(a=in[1], b=aNand2, out=bNand2);
+        Nand(a=sel, b=in[1], out=cNand2);
+        Nand(a=bNand2, b=bNand2, out=a[1]);
+        Nand(a=cNand2, b=cNand2, out=b[1]);
+        //dmux3
+        Nand(a=sel, b=sel, out=aNand3);
+        Nand(a=in[2], b=aNand3, out=bNand3);
+        Nand(a=sel, b=in[2], out=cNand3);
+        Nand(a=bNand3, b=bNand3, out=a[2]);
+        Nand(a=cNand3, b=cNand3, out=b[2]);
+    }
+    """
+    def calculate(self):
+        # dmux1
+        nand_a0 = NandGate().evaluate(a=self.sel, b=self.sel)
+        nand_b0 = NandGate().evaluate(a="0b"+self._in3[-1], b=nand_a0)
+        nand_c0 = NandGate().evaluate(a=self.sel, b="0b"+self._in3[-1])
+        a0 = NandGate().evaluate(a=nand_b0, b=nand_b0)[-1]
+        b0 = NandGate().evaluate(a=nand_c0, b=nand_c0)[-1]
+
+        # dmux2
+        nand_b1 = NandGate().evaluate(a="0b"+self._in3[-2], b=nand_a0)
+        nand_c1 = NandGate().evaluate(a=self.sel, b="0b"+self._in3[-2])
+        a1 = NandGate().evaluate(a=nand_b1, b=nand_b1)[-1]
+        b1 = NandGate().evaluate(a=nand_c1, b=nand_c1)[-1]
+
+        # dmux3
+        nand_b2 = NandGate().evaluate(a="0b"+self._in3[-3], b=nand_a0)
+        nand_c2 = NandGate().evaluate(a=self.sel, b="0b"+self._in3[-3])
+        a2 = NandGate().evaluate(a=nand_b2, b=nand_b2)[-1]
+        b2 = NandGate().evaluate(a=nand_c2, b=nand_c2)[-1]
+
+        return ("0b" + a2 + a1 + a0), ("0b" + b2 + b1 + b0)
+
 
 def input_unit_test():
     """
@@ -1386,475 +1445,496 @@ def input_unit_test():
     assert test == []
 
 
-def main():
+def main(test_all=False):
     """
     Sanity check our truth tables for each gate as implemented
     """
-    _nand = NandGate()
-    _not = NotGate()
-    _not16 = Not16Gate()
-    _and = AndGate()
-    _and16 = And16Gate()
-    _or = OrGate()
-    _or16 = Or16Gate()
-    _or8way = Or8Way()
-    _xor = XorGate()
-    _nor = NorGate()
-    _xnor = XNorGate()
-    _mux = Mux()
-    _mux16 = Mux16()
-    _mux4way16 = Mux4Way16()
-    _mux8way16 = Mux8Way16()
-    _dmux = DMux()
-    _dmux4way = DMux4Way()
-    _dmux8way = DMux8Way()
-    _halfAdder = HalfAdder()
-    _fullAdder = FullAdder()
-    _add16 = Add16()
-    _inc16 = Inc16()
-    _alu = ALU()
-    _dff = DFF()
-    _bit = Bit()
-    _register = Register(watermark="register_assert")
-    _pc = PC()
-    _ram8 = RAM8(watermark="ram8_assert")
-    _ram64 = RAM64(watermark="ram64_assert")
-    _ram512 = RAM512(watermark="ram512_assert")
-    _ram4k = RAM4K(watermark="ram4k_assert")
-    _ram16k = RAM16K(watermark="ram16k_assert")
+    if test_all:
+        _nand = NandGate()
+        _not = NotGate()
+        _not16 = Not16Gate()
+        _and = AndGate()
+        _and16 = And16Gate()
+        _or = OrGate()
+        _or16 = Or16Gate()
+        _or8way = Or8Way()
+        _xor = XorGate()
+        _nor = NorGate()
+        _xnor = XNorGate()
+        _mux = Mux()
+        _mux16 = Mux16()
+        _mux4way16 = Mux4Way16()
+        _mux8way16 = Mux8Way16()
+        _dmux = DMux()
+        _dmux3 = DMux3()
+        _dmux4way = DMux4Way()
+        _dmux8way = DMux8Way()
+        _halfAdder = HalfAdder()
+        _fullAdder = FullAdder()
+        _add16 = Add16()
+        _inc16 = Inc16()
+        _alu = ALU()
+        _dff = DFF()
+        _bit = Bit()
+        _register = Register(watermark="register_assert")
+        _pc = PC()
+        _ram8 = RAM8(watermark="ram8_assert")
+        _ram64 = RAM64(watermark="ram64_assert")
+        _ram512 = RAM512(watermark="ram512_assert")
+        _ram4k = RAM4K(watermark="ram4k_assert")
+        _ram16k = RAM16K(watermark="ram16k_assert")
 
-    input_unit_test()
+        input_unit_test()
 
-    # For two 1 inputs return a 1 output, else return a 1 output
-    assert _nand.evaluate(a="0b1", b="0b1") == "0b0"
-    assert _nand.evaluate(a="0b1", b="0b0") == "0b1"
-    assert _nand.evaluate(a="0b0", b="0b1") == "0b1"
-    assert _nand.evaluate(a="0b0", b="0b0") == "0b1"
+        # For two 1 inputs return a 1 output, else return a 1 output
+        assert _nand.evaluate(a="0b1", b="0b1") == "0b0"
+        assert _nand.evaluate(a="0b1", b="0b0") == "0b1"
+        assert _nand.evaluate(a="0b0", b="0b1") == "0b1"
+        assert _nand.evaluate(a="0b0", b="0b0") == "0b1"
 
-    # For a single input, return the opposite
-    assert _not.evaluate(_in="0b1") == "0b0"
-    assert _not.evaluate(_in="0b0") == "0b1"
+        # For a single input, return the opposite
+        assert _not.evaluate(_in="0b1") == "0b0"
+        assert _not.evaluate(_in="0b0") == "0b1"
 
-    # NotGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
-    assert _not16.evaluate(_in16="0b0000000000000000") == "0b1111111111111111"
-    assert _not16.evaluate(_in16="0b1111111111111111") == "0b0000000000000000"
-    assert _not16.evaluate(_in16="0b0000001111000000") == "0b1111110000111111"
+        # NotGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
+        assert _not16.evaluate(_in16="0b0000000000000000") == "0b1111111111111111"
+        assert _not16.evaluate(_in16="0b1111111111111111") == "0b0000000000000000"
+        assert _not16.evaluate(_in16="0b0000001111000000") == "0b1111110000111111"
 
-    # For two 1 inputs return a 1 output, else return a 0 output
-    assert _and.evaluate(a="0b1", b="0b1") == "0b1"
-    assert _and.evaluate(a="0b1", b="0b0") == "0b0"
-    assert _and.evaluate(a="0b0", b="0b1") == "0b0"
-    assert _and.evaluate(a="0b0", b="0b0") == "0b0"
+        # For two 1 inputs return a 1 output, else return a 0 output
+        assert _and.evaluate(a="0b1", b="0b1") == "0b1"
+        assert _and.evaluate(a="0b1", b="0b0") == "0b0"
+        assert _and.evaluate(a="0b0", b="0b1") == "0b0"
+        assert _and.evaluate(a="0b0", b="0b0") == "0b0"
 
-    # AndGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
-    assert _and16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000") == "0b0000000000000000"
-    assert _and16.evaluate(a16="0b1111111111111111", b16="0b1111111111111111") == "0b1111111111111111"
-    assert _and16.evaluate(a16="0b0000001111000000", b16="0b0000000000000000") == "0b0000000000000000"
-    assert _and16.evaluate(a16="0b0000001111000000", b16="0b0000001111000000") == "0b0000001111000000"
+        # AndGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
+        assert _and16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000") == "0b0000000000000000"
+        assert _and16.evaluate(a16="0b1111111111111111", b16="0b1111111111111111") == "0b1111111111111111"
+        assert _and16.evaluate(a16="0b0000001111000000", b16="0b0000000000000000") == "0b0000000000000000"
+        assert _and16.evaluate(a16="0b0000001111000000", b16="0b0000001111000000") == "0b0000001111000000"
 
-    # If either of the two inputs are 1 return a 1 output, else return a 0 output
-    assert _or.evaluate(a="0b1", b="0b1") == "0b1"
-    assert _or.evaluate(a="0b1", b="0b0") == "0b1"
-    assert _or.evaluate(a="0b0", b="0b1") == "0b1"
-    assert _or.evaluate(a="0b0", b="0b0") == "0b0"
+        # If either of the two inputs are 1 return a 1 output, else return a 0 output
+        assert _or.evaluate(a="0b1", b="0b1") == "0b1"
+        assert _or.evaluate(a="0b1", b="0b0") == "0b1"
+        assert _or.evaluate(a="0b0", b="0b1") == "0b1"
+        assert _or.evaluate(a="0b0", b="0b0") == "0b0"
 
-    # If either of the two inputs are 1 return a 0 output, else return a 1 output
-    assert _nor.evaluate(a="0b1", b="0b1") == "0b0"
-    assert _nor.evaluate(a="0b1", b="0b0") == "0b0"
-    assert _nor.evaluate(a="0b0", b="0b1") == "0b0"
-    assert _nor.evaluate(a="0b0", b="0b0") == "0b1"
+        # If either of the two inputs are 1 return a 0 output, else return a 1 output
+        assert _nor.evaluate(a="0b1", b="0b1") == "0b0"
+        assert _nor.evaluate(a="0b1", b="0b0") == "0b0"
+        assert _nor.evaluate(a="0b0", b="0b1") == "0b0"
+        assert _nor.evaluate(a="0b0", b="0b0") == "0b1"
 
-    # OrGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
-    assert _or16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000") == "0b0000000000000000"
-    assert _or16.evaluate(a16="0b1111111111111111", b16="0b1111111111111111") == "0b1111111111111111"
-    assert _or16.evaluate(a16="0b0000001111000000", b16="0b0000000000000000") == "0b0000001111000000"
-    assert _or16.evaluate(a16="0b1111000000000000", b16="0b0000000000000000") == "0b1111000000000000"
+        # OrGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
+        assert _or16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000") == "0b0000000000000000"
+        assert _or16.evaluate(a16="0b1111111111111111", b16="0b1111111111111111") == "0b1111111111111111"
+        assert _or16.evaluate(a16="0b0000001111000000", b16="0b0000000000000000") == "0b0000001111000000"
+        assert _or16.evaluate(a16="0b1111000000000000", b16="0b0000000000000000") == "0b1111000000000000"
 
-    # 8 bit bus of 1 bit inputs, 1 bit output, if any bits 1 return 1, else 0
-    assert _or8way.evaluate(_in8="0b11111111") == "0b1"
-    assert _or8way.evaluate(_in8="0b00011000") == "0b1"
-    assert _or8way.evaluate(_in8="0b00000000") == "0b0"
+        # 8 bit bus of 1 bit inputs, 1 bit output, if any bits 1 return 1, else 0
+        assert _or8way.evaluate(_in8="0b11111111") == "0b1"
+        assert _or8way.evaluate(_in8="0b00011000") == "0b1"
+        assert _or8way.evaluate(_in8="0b00000000") == "0b0"
 
-    # If the two inputs are different return a 1 output, else return a 0 output
-    assert _xor.evaluate(a="0b1", b="0b1") == "0b0"
-    assert _xor.evaluate(a="0b1", b="0b0") == "0b1"
-    assert _xor.evaluate(a="0b0", b="0b1") == "0b1"
-    assert _xor.evaluate(a="0b0", b="0b0") == "0b0"
+        # If the two inputs are different return a 1 output, else return a 0 output
+        assert _xor.evaluate(a="0b1", b="0b1") == "0b0"
+        assert _xor.evaluate(a="0b1", b="0b0") == "0b1"
+        assert _xor.evaluate(a="0b0", b="0b1") == "0b1"
+        assert _xor.evaluate(a="0b0", b="0b0") == "0b0"
 
-    # If the two inputs are different return a 0 output, else return a 1 output
-    assert _xnor.evaluate(a="0b1", b="0b1") == "0b1"
-    assert _xnor.evaluate(a="0b1", b="0b0") == "0b0"
-    assert _xnor.evaluate(a="0b0", b="0b1") == "0b0"
-    assert _xnor.evaluate(a="0b0", b="0b0") == "0b1"
+        # If the two inputs are different return a 0 output, else return a 1 output
+        assert _xnor.evaluate(a="0b1", b="0b1") == "0b1"
+        assert _xnor.evaluate(a="0b1", b="0b0") == "0b0"
+        assert _xnor.evaluate(a="0b0", b="0b1") == "0b0"
+        assert _xnor.evaluate(a="0b0", b="0b0") == "0b1"
 
-    # Select an output from two inputs, only chosen input will be emitted
-    assert _mux.evaluate(a="0b1", b="0b0", sel="0b0") == "0b1"
-    assert _mux.evaluate(a="0b1", b="0b0", sel="0b1") == "0b0"
-    assert _mux.evaluate(a="0b0", b="0b1", sel="0b0") == "0b0"
-    assert _mux.evaluate(a="0b0", b="0b1", sel="0b1") == "0b1"
+        # Select an output from two inputs, only chosen input will be emitted
+        assert _mux.evaluate(a="0b1", b="0b0", sel="0b0") == "0b1"
+        assert _mux.evaluate(a="0b1", b="0b0", sel="0b1") == "0b0"
+        assert _mux.evaluate(a="0b0", b="0b1", sel="0b0") == "0b0"
+        assert _mux.evaluate(a="0b0", b="0b1", sel="0b1") == "0b1"
 
-    # Mux but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
-    assert _mux16.evaluate(a16="0b1111111111111111", b16="0b0000000000000000", sel="0b0") == "0b1111111111111111"
-    assert _mux16.evaluate(a16="0b1111111111111111", b16="0b0000000000000000", sel="0b1") == "0b0000000000000000"
-    assert _mux16.evaluate(a16="0b0000000000000000", b16="0b1111111111111111", sel="0b0") == "0b0000000000000000"
-    assert _mux16.evaluate(a16="0b0000000000000000", b16="0b1111111111111111", sel="0b1") == "0b1111111111111111"
+        # Mux but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
+        assert _mux16.evaluate(a16="0b1111111111111111", b16="0b0000000000000000", sel="0b0") == "0b1111111111111111"
+        assert _mux16.evaluate(a16="0b1111111111111111", b16="0b0000000000000000", sel="0b1") == "0b0000000000000000"
+        assert _mux16.evaluate(a16="0b0000000000000000", b16="0b1111111111111111", sel="0b0") == "0b0000000000000000"
+        assert _mux16.evaluate(a16="0b0000000000000000", b16="0b1111111111111111", sel="0b1") == "0b1111111111111111"
 
-    # Mux16 but with 4 x 16 bit inputs, one 16 bit output, two bit selector, only selected is emitted
-    assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b00") == "0b0000000000000000"
-    assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b01") == "0b0000000000000000"
-    assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b10") == "0b0000000000000000"
-    assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b11") == "0b0000000000000000"
-    assert _mux4way16.evaluate(a16="0b1111111111111111", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b00") == "0b1111111111111111"
-    assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b1111111111111111", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b01") == "0b1111111111111111"
-    assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b1111111111111111", d16="0b0000000000000000", sel2="0b10") == "0b1111111111111111"
-    assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b1111111111111111", sel2="0b11") == "0b1111111111111111"
+        # Mux16 but with 4 x 16 bit inputs, one 16 bit output, two bit selector, only selected is emitted
+        assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b00") == "0b0000000000000000"
+        assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b01") == "0b0000000000000000"
+        assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b10") == "0b0000000000000000"
+        assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b11") == "0b0000000000000000"
+        assert _mux4way16.evaluate(a16="0b1111111111111111", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b00") == "0b1111111111111111"
+        assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b1111111111111111", c16="0b0000000000000000", d16="0b0000000000000000", sel2="0b01") == "0b1111111111111111"
+        assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b1111111111111111", d16="0b0000000000000000", sel2="0b10") == "0b1111111111111111"
+        assert _mux4way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b1111111111111111", sel2="0b11") == "0b1111111111111111"
 
-    # Mux16 but with 8 x 16 bit inputs, one 16 bit output, 3 bit selector, only selected is emitted
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b000") == "0b0000000000000000"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b001") == "0b0000000000000000"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b010") == "0b0000000000000000"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b011") == "0b0000000000000000"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b100") == "0b0000000000000000"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b101") == "0b0000000000000000"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b110") == "0b0000000000000000"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b111") == "0b0000000000000000"
-    assert _mux8way16.evaluate(a16="0b1111111111111111", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b000") == "0b1111111111111111"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b1111111111111111", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b001") == "0b1111111111111111"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b1111111111111111", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b010") == "0b1111111111111111"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b1111111111111111", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b011") == "0b1111111111111111"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b1111111111111111", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b100") == "0b1111111111111111"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b1111111111111111", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b101") == "0b1111111111111111"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b1111111111111111", h16="0b0000000000000000", sel3="0b110") == "0b1111111111111111"
-    assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b1111111111111111", sel3="0b111") == "0b1111111111111111"
+        # Mux16 but with 8 x 16 bit inputs, one 16 bit output, 3 bit selector, only selected is emitted
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b000") == "0b0000000000000000"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b001") == "0b0000000000000000"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b010") == "0b0000000000000000"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b011") == "0b0000000000000000"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b100") == "0b0000000000000000"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b101") == "0b0000000000000000"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b110") == "0b0000000000000000"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b111") == "0b0000000000000000"
+        assert _mux8way16.evaluate(a16="0b1111111111111111", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b000") == "0b1111111111111111"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b1111111111111111", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b001") == "0b1111111111111111"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b1111111111111111", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b010") == "0b1111111111111111"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b1111111111111111", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b011") == "0b1111111111111111"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b1111111111111111", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b100") == "0b1111111111111111"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b1111111111111111", g16="0b0000000000000000", h16="0b0000000000000000", sel3="0b101") == "0b1111111111111111"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b1111111111111111", h16="0b0000000000000000", sel3="0b110") == "0b1111111111111111"
+        assert _mux8way16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000", c16="0b0000000000000000", d16="0b0000000000000000", e16="0b0000000000000000", f16="0b0000000000000000", g16="0b0000000000000000", h16="0b1111111111111111", sel3="0b111") == "0b1111111111111111"
 
-    # Select one of two outputs, input passes through and unselected output is always 0
-    assert _dmux.evaluate(_in="0b0", sel="0b0") == ("0b0", "0b0")
-    assert _dmux.evaluate(_in="0b0", sel="0b1") == ("0b0", "0b0")
-    assert _dmux.evaluate(_in="0b1", sel="0b0") == ("0b1", "0b0")
-    assert _dmux.evaluate(_in="0b1", sel="0b1") == ("0b0", "0b1")
+        # Select one of two outputs, input passes through and unselected output is always 0
+        assert _dmux.evaluate(_in="0b0", sel="0b0") == ("0b0", "0b0")
+        assert _dmux.evaluate(_in="0b0", sel="0b1") == ("0b0", "0b0")
+        assert _dmux.evaluate(_in="0b1", sel="0b0") == ("0b1", "0b0")
+        assert _dmux.evaluate(_in="0b1", sel="0b1") == ("0b0", "0b1")
 
-    # With a two bit selector choose one of four outputs, input passes through and unselected is always 0
-    assert _dmux4way.evaluate(_in="0b0", sel2="0b00") == ("0b0", "0b0", "0b0", "0b0")
-    assert _dmux4way.evaluate(_in="0b0", sel2="0b01") == ("0b0", "0b0", "0b0", "0b0")
-    assert _dmux4way.evaluate(_in="0b0", sel2="0b10") == ("0b0", "0b0", "0b0", "0b0")
-    assert _dmux4way.evaluate(_in="0b0", sel2="0b11") == ("0b0", "0b0", "0b0", "0b0")
-    assert _dmux4way.evaluate(_in="0b1", sel2="0b00") == ("0b1", "0b0", "0b0", "0b0")
-    assert _dmux4way.evaluate(_in="0b1", sel2="0b01") == ("0b0", "0b1", "0b0", "0b0")
-    assert _dmux4way.evaluate(_in="0b1", sel2="0b10") == ("0b0", "0b0", "0b1", "0b0")
-    assert _dmux4way.evaluate(_in="0b1", sel2="0b11") == ("0b0", "0b0", "0b0", "0b1")
+        # With a two bit selector choose one of four outputs, input passes through and unselected is always 0
+        assert _dmux4way.evaluate(_in="0b0", sel2="0b00") == ("0b0", "0b0", "0b0", "0b0")
+        assert _dmux4way.evaluate(_in="0b0", sel2="0b01") == ("0b0", "0b0", "0b0", "0b0")
+        assert _dmux4way.evaluate(_in="0b0", sel2="0b10") == ("0b0", "0b0", "0b0", "0b0")
+        assert _dmux4way.evaluate(_in="0b0", sel2="0b11") == ("0b0", "0b0", "0b0", "0b0")
+        assert _dmux4way.evaluate(_in="0b1", sel2="0b00") == ("0b1", "0b0", "0b0", "0b0")
+        assert _dmux4way.evaluate(_in="0b1", sel2="0b01") == ("0b0", "0b1", "0b0", "0b0")
+        assert _dmux4way.evaluate(_in="0b1", sel2="0b10") == ("0b0", "0b0", "0b1", "0b0")
+        assert _dmux4way.evaluate(_in="0b1", sel2="0b11") == ("0b0", "0b0", "0b0", "0b1")
 
-    # With a 3 bit selector choose one of 8 outputs, input passes through and unselected is always 0
-    assert _dmux8way.evaluate(_in="0b0", sel3="0b000") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b0", sel3="0b001") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b0", sel3="0b010") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b0", sel3="0b011") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b0", sel3="0b100") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b0", sel3="0b101") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b0", sel3="0b110") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b0", sel3="0b111") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b1", sel3="0b000") == ("0b1", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b1", sel3="0b001") == ("0b0", "0b1", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b1", sel3="0b010") == ("0b0", "0b0", "0b1", "0b0", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b1", sel3="0b011") == ("0b0", "0b0", "0b0", "0b1", "0b0", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b1", sel3="0b100") == ("0b0", "0b0", "0b0", "0b0", "0b1", "0b0", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b1", sel3="0b101") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b1", "0b0", "0b0")
-    assert _dmux8way.evaluate(_in="0b1", sel3="0b110") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b1", "0b0")
-    assert _dmux8way.evaluate(_in="0b1", sel3="0b111") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b1")
+        # With a 3 bit selector choose one of 8 outputs, input passes through and unselected is always 0
+        assert _dmux8way.evaluate(_in="0b0", sel3="0b000") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b0", sel3="0b001") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b0", sel3="0b010") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b0", sel3="0b011") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b0", sel3="0b100") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b0", sel3="0b101") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b0", sel3="0b110") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b0", sel3="0b111") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b1", sel3="0b000") == ("0b1", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b1", sel3="0b001") == ("0b0", "0b1", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b1", sel3="0b010") == ("0b0", "0b0", "0b1", "0b0", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b1", sel3="0b011") == ("0b0", "0b0", "0b0", "0b1", "0b0", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b1", sel3="0b100") == ("0b0", "0b0", "0b0", "0b0", "0b1", "0b0", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b1", sel3="0b101") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b1", "0b0", "0b0")
+        assert _dmux8way.evaluate(_in="0b1", sel3="0b110") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b1", "0b0")
+        assert _dmux8way.evaluate(_in="0b1", sel3="0b111") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b1")
 
-    # Computes the sum of 2 x 1 bit inputs, output carry bit & sum bit
-    assert _halfAdder.evaluate(a="0b0", b="0b0") == ("0b0", "0b0")
-    assert _halfAdder.evaluate(a="0b0", b="0b1") == ("0b0", "0b1")
-    assert _halfAdder.evaluate(a="0b1", b="0b0") == ("0b0", "0b1")
-    assert _halfAdder.evaluate(a="0b1", b="0b1") == ("0b1", "0b0")
+        # Computes the sum of 2 x 1 bit inputs, output carry bit & sum bit
+        assert _halfAdder.evaluate(a="0b0", b="0b0") == ("0b0", "0b0")
+        assert _halfAdder.evaluate(a="0b0", b="0b1") == ("0b0", "0b1")
+        assert _halfAdder.evaluate(a="0b1", b="0b0") == ("0b0", "0b1")
+        assert _halfAdder.evaluate(a="0b1", b="0b1") == ("0b1", "0b0")
 
-    # Computes the sum of 3 x 1 bit inputs, output carry bit & sum bit
-    assert _fullAdder.evaluate(a="0b0", b="0b0", c="0b0") == ("0b0", "0b0")
-    assert _fullAdder.evaluate(a="0b1", b="0b1", c="0b1") == ("0b1", "0b1")
-    assert _fullAdder.evaluate(a="0b1", b="0b0", c="0b0") == ("0b0", "0b1")
-    assert _fullAdder.evaluate(a="0b0", b="0b1", c="0b0") == ("0b0", "0b1")
-    assert _fullAdder.evaluate(a="0b0", b="0b0", c="0b1") == ("0b0", "0b1")
-    assert _fullAdder.evaluate(a="0b0", b="0b1", c="0b1") == ("0b1", "0b0")
-    assert _fullAdder.evaluate(a="0b1", b="0b0", c="0b1") == ("0b1", "0b0")
-    assert _fullAdder.evaluate(a="0b1", b="0b1", c="0b0") == ("0b1", "0b0")
+        # Computes the sum of 3 x 1 bit inputs, output carry bit & sum bit
+        assert _fullAdder.evaluate(a="0b0", b="0b0", c="0b0") == ("0b0", "0b0")
+        assert _fullAdder.evaluate(a="0b1", b="0b1", c="0b1") == ("0b1", "0b1")
+        assert _fullAdder.evaluate(a="0b1", b="0b0", c="0b0") == ("0b0", "0b1")
+        assert _fullAdder.evaluate(a="0b0", b="0b1", c="0b0") == ("0b0", "0b1")
+        assert _fullAdder.evaluate(a="0b0", b="0b0", c="0b1") == ("0b0", "0b1")
+        assert _fullAdder.evaluate(a="0b0", b="0b1", c="0b1") == ("0b1", "0b0")
+        assert _fullAdder.evaluate(a="0b1", b="0b0", c="0b1") == ("0b1", "0b0")
+        assert _fullAdder.evaluate(a="0b1", b="0b1", c="0b0") == ("0b1", "0b0")
 
-    # Adds two 16-bit values and output 16 bit result, the most significant carry bit is ignored
-    assert _add16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000") == "0b0000000000000000"
-    assert _add16.evaluate(a16="0b0000000000000001", b16="0b0000000000000001") == "0b0000000000000010"
-    assert _add16.evaluate(a16="0b0000000000000001", b16="0b0000000000001111") == "0b0000000000010000"
-    assert _add16.evaluate(a16="0b1111111111111110", b16="0b0000000000000001") == "0b1111111111111111"
-    assert _add16.evaluate(a16="0b1111111100000000", b16="0b0000000000000000") == "0b1111111100000000"
-    assert _add16.evaluate(a16="0b0000000011111111", b16="0b0000000000000000") == "0b0000000011111111"
-    assert _add16.evaluate(a16="0b0000000000000000", b16="0b1111111100000000") == "0b1111111100000000"
-    assert _add16.evaluate(a16="0b0000000000000000", b16="0b0000000011111111") == "0b0000000011111111"
+        # Adds two 16-bit values and output 16 bit result, the most significant carry bit is ignored
+        assert _add16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000") == "0b0000000000000000"
+        assert _add16.evaluate(a16="0b0000000000000001", b16="0b0000000000000001") == "0b0000000000000010"
+        assert _add16.evaluate(a16="0b0000000000000001", b16="0b0000000000001111") == "0b0000000000010000"
+        assert _add16.evaluate(a16="0b1111111111111110", b16="0b0000000000000001") == "0b1111111111111111"
+        assert _add16.evaluate(a16="0b1111111100000000", b16="0b0000000000000000") == "0b1111111100000000"
+        assert _add16.evaluate(a16="0b0000000011111111", b16="0b0000000000000000") == "0b0000000011111111"
+        assert _add16.evaluate(a16="0b0000000000000000", b16="0b1111111100000000") == "0b1111111100000000"
+        assert _add16.evaluate(a16="0b0000000000000000", b16="0b0000000011111111") == "0b0000000011111111"
 
-    # Increment a 16 bit number
-    assert _inc16.evaluate(_in16="0b0000000000000000") == "0b0000000000000001"
-    assert _inc16.evaluate(_in16="0b0000000000000010") == "0b0000000000000011"
-    assert _inc16.evaluate(_in16="0b0000000000000011") == "0b0000000000000100"
-    assert _inc16.evaluate(_in16="0b1111111111111110") == "0b1111111111111111"
+        # Increment a 16 bit number
+        assert _inc16.evaluate(_in16="0b0000000000000000") == "0b0000000000000001"
+        assert _inc16.evaluate(_in16="0b0000000000000010") == "0b0000000000000011"
+        assert _inc16.evaluate(_in16="0b0000000000000011") == "0b0000000000000100"
+        assert _inc16.evaluate(_in16="0b1111111111111110") == "0b1111111111111111"
 
-    # ALU: addition
-    assert _alu.evaluate(x="0b0000000000000000", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
-    assert _alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000010", "0b0", "0b0")
+        # ALU: addition
+        assert _alu.evaluate(x="0b0000000000000000", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+        assert _alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000010", "0b0", "0b0")
 
-    # ALU: zx/yx
-    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b1", zy="0b1", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
-    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b1", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
-    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b1", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+        # ALU: zx/yx
+        assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b1", zy="0b1", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+        assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b1", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+        assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b1", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
 
-    # ALU: nx/ny
-    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b1", ny="0b1", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
-    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b1", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
-    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b1", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+        # ALU: nx/ny
+        assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b1", ny="0b1", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+        assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b1", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+        assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b1", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
 
-    # ALU: and
-    assert _alu.evaluate(x="0b0000000000000000", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
-    assert _alu.evaluate(x="0b0000000000000000", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
-    assert _alu.evaluate(x="0b1111111111111111", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
-    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+        # ALU: and
+        assert _alu.evaluate(x="0b0000000000000000", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+        assert _alu.evaluate(x="0b0000000000000000", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+        assert _alu.evaluate(x="0b1111111111111111", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+        assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
 
-    # ALU: not(and)
-    assert _alu.evaluate(x="0b1111111111111111", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b1111111111111111", "0b0", "0b1")
-    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b0000000000000000", "0b1", "0b0")
+        # ALU: not(and)
+        assert _alu.evaluate(x="0b1111111111111111", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b1111111111111111", "0b0", "0b1")
+        assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b0000000000000000", "0b1", "0b0")
 
-    # DFF
-    assert _dff.evaluate(_in="0b0", load="0b0") == ("0b0", "0b1")  # Q=0 (initial)
-    assert _dff.evaluate(_in="0b1", load="0b1") == ("0b1", "0b0")  # Q=1 (set 1)
-    assert _dff.evaluate(_in="0b1", load="0b0") == ("0b1", "0b0")  # Q=1 (no change)
-    assert _dff.evaluate(_in="0b0", load="0b0") == ("0b1", "0b0")  # Q=1 (no change)
-    assert _dff.evaluate(_in="0b0", load="0b1") == ("0b0", "0b0")  # Q=0 (set 0 / reset)
-    assert _dff.evaluate(_in="0b1", load="0b0") == ("0b0", "0b1")  # Q=1 (no change)
-    assert _dff.evaluate(_in="0b0", load="0b0") == ("0b0", "0b1")  # Q=1 (no change)
+        # DFF
+        assert _dff.evaluate(_in="0b0", load="0b0") == ("0b0", "0b1")  # Q=0 (initial)
+        assert _dff.evaluate(_in="0b1", load="0b1") == ("0b1", "0b0")  # Q=1 (set 1)
+        assert _dff.evaluate(_in="0b1", load="0b0") == ("0b1", "0b0")  # Q=1 (no change)
+        assert _dff.evaluate(_in="0b0", load="0b0") == ("0b1", "0b0")  # Q=1 (no change)
+        assert _dff.evaluate(_in="0b0", load="0b1") == ("0b0", "0b0")  # Q=0 (set 0 / reset)
+        assert _dff.evaluate(_in="0b1", load="0b0") == ("0b0", "0b1")  # Q=1 (no change)
+        assert _dff.evaluate(_in="0b0", load="0b0") == ("0b0", "0b1")  # Q=1 (no change)
 
-    # # 1 bit register, if load emit in else previous value
-    assert _bit.evaluate(_in="0b0", load="0b0") == "0b0"
-    assert _bit.evaluate(_in="0b0", load="0b1") == "0b0"
-    assert _bit.evaluate(_in="0b1", load="0b0") == "0b0"
-    assert _bit.evaluate(_in="0b1", load="0b1") == "0b1"
-    assert _bit.evaluate(_in="0b0", load="0b0") == "0b1"
+        # # 1 bit register, if load emit in else previous value
+        assert _bit.evaluate(_in="0b0", load="0b0") == "0b0"
+        assert _bit.evaluate(_in="0b0", load="0b1") == "0b0"
+        assert _bit.evaluate(_in="0b1", load="0b0") == "0b0"
+        assert _bit.evaluate(_in="0b1", load="0b1") == "0b1"
+        assert _bit.evaluate(_in="0b0", load="0b0") == "0b1"
 
-    # # 16-bit register, if load emit in else previous value
-    assert _register.evaluate(_in16="0b0000000000000000", load="0b0") == "0b0000000000000000"
-    assert _register.evaluate(_in16="0b0000000000000000", load="0b1") == "0b0000000000000000"
-    assert _register.evaluate(_in16="0b1111111111111111", load="0b0") == "0b0000000000000000"
-    assert _register.evaluate(_in16="0b1111111111111111", load="0b1") == "0b1111111111111111"
-    assert _register.evaluate(_in16="0b0000000000000001", load="0b1") == "0b0000000000000001"
-    assert _register.evaluate(_in16="0b1000000000000000", load="0b1") == "0b1000000000000000"
+        # # 16-bit register, if load emit in else previous value
+        assert _register.evaluate(_in16="0b0000000000000000", load="0b0") == "0b0000000000000000"
+        assert _register.evaluate(_in16="0b0000000000000000", load="0b1") == "0b0000000000000000"
+        assert _register.evaluate(_in16="0b1111111111111111", load="0b0") == "0b0000000000000000"
+        assert _register.evaluate(_in16="0b1111111111111111", load="0b1") == "0b1111111111111111"
+        assert _register.evaluate(_in16="0b0000000000000001", load="0b1") == "0b0000000000000001"
+        assert _register.evaluate(_in16="0b1000000000000000", load="0b1") == "0b1000000000000000"
 
-    # # PC: load (inc=0, reset=0)
-    assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
-    assert _pc.evaluate(_in16="0b1111111111111111", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
-    assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b0", reset="0b0") == "0b1111111111111111"
-    assert _pc.evaluate(_in16="0b0000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000000"
-    assert _pc.evaluate(_in16="0b1000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b1000000000000000"
-    assert _pc.evaluate(_in16="0b0000000000000001", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000001"
+        # # PC: load (inc=0, reset=0)
+        assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
+        assert _pc.evaluate(_in16="0b1111111111111111", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
+        assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b0", reset="0b0") == "0b1111111111111111"
+        assert _pc.evaluate(_in16="0b0000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000000"
+        assert _pc.evaluate(_in16="0b1000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b1000000000000000"
+        assert _pc.evaluate(_in16="0b0000000000000001", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000001"
 
-    # PC: inc/reset
-    assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b1", reset="0b0") == "0b0000000000000010"
-    assert _pc.evaluate(_in16="0b1111111111111111", load="0b0", inc="0b0", reset="0b1") == "0b0000000000000000"
+        # PC: inc/reset
+        assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b1", reset="0b0") == "0b0000000000000010"
+        assert _pc.evaluate(_in16="0b1111111111111111", load="0b0", inc="0b0", reset="0b1") == "0b0000000000000000"
 
-    # PC: reset>load>inc
-    assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b1", reset="0b1") == "0b0000000000000000"
-    assert _pc.evaluate(_in16="0b0000000000000100", load="0b1", inc="0b1", reset="0b0") == "0b0000000000000100"
+        # PC: reset>load>inc
+        assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b1", reset="0b1") == "0b0000000000000000"
+        assert _pc.evaluate(_in16="0b0000000000000100", load="0b1", inc="0b1", reset="0b0") == "0b0000000000000100"
 
-    # RAM8: sequential set
-    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b1", addr3="0b000") == "0b0000000000000000"
-    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b1", addr3="0b001") == "0b0000000000000001"
-    assert _ram8.evaluate(_in16="0b0000000000000010", load="0b1", addr3="0b010") == "0b0000000000000010"
-    assert _ram8.evaluate(_in16="0b0000000000000011", load="0b1", addr3="0b011") == "0b0000000000000011"
-    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b1", addr3="0b100") == "0b1000000000000000"
-    assert _ram8.evaluate(_in16="0b1010000000000000", load="0b1", addr3="0b101") == "0b1010000000000000"
-    assert _ram8.evaluate(_in16="0b1100000000000000", load="0b1", addr3="0b110") == "0b1100000000000000"
-    assert _ram8.evaluate(_in16="0b1110000000000000", load="0b1", addr3="0b111") == "0b1110000000000000"
+        # RAM8: sequential set
+        assert _ram8.evaluate(_in16="0b0000000000000000", load="0b1", addr3="0b000") == "0b0000000000000000"
+        assert _ram8.evaluate(_in16="0b0000000000000001", load="0b1", addr3="0b001") == "0b0000000000000001"
+        assert _ram8.evaluate(_in16="0b0000000000000010", load="0b1", addr3="0b010") == "0b0000000000000010"
+        assert _ram8.evaluate(_in16="0b0000000000000011", load="0b1", addr3="0b011") == "0b0000000000000011"
+        assert _ram8.evaluate(_in16="0b1000000000000000", load="0b1", addr3="0b100") == "0b1000000000000000"
+        assert _ram8.evaluate(_in16="0b1010000000000000", load="0b1", addr3="0b101") == "0b1010000000000000"
+        assert _ram8.evaluate(_in16="0b1100000000000000", load="0b1", addr3="0b110") == "0b1100000000000000"
+        assert _ram8.evaluate(_in16="0b1110000000000000", load="0b1", addr3="0b111") == "0b1110000000000000"
 
-    # RAM8: sequential load
-    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b000") == "0b0000000000000000"
-    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b0", addr3="0b001") == "0b0000000000000001"
-    assert _ram8.evaluate(_in16="0b0000000000000010", load="0b0", addr3="0b010") == "0b0000000000000010"
-    assert _ram8.evaluate(_in16="0b0000000000000011", load="0b0", addr3="0b011") == "0b0000000000000011"
-    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b0", addr3="0b100") == "0b1000000000000000"
-    assert _ram8.evaluate(_in16="0b1010000000000000", load="0b0", addr3="0b101") == "0b1010000000000000"
-    assert _ram8.evaluate(_in16="0b1100000000000000", load="0b0", addr3="0b110") == "0b1100000000000000"
-    assert _ram8.evaluate(_in16="0b1110000000000000", load="0b0", addr3="0b111") == "0b1110000000000000"
+        # RAM8: sequential load
+        assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b000") == "0b0000000000000000"
+        assert _ram8.evaluate(_in16="0b0000000000000001", load="0b0", addr3="0b001") == "0b0000000000000001"
+        assert _ram8.evaluate(_in16="0b0000000000000010", load="0b0", addr3="0b010") == "0b0000000000000010"
+        assert _ram8.evaluate(_in16="0b0000000000000011", load="0b0", addr3="0b011") == "0b0000000000000011"
+        assert _ram8.evaluate(_in16="0b1000000000000000", load="0b0", addr3="0b100") == "0b1000000000000000"
+        assert _ram8.evaluate(_in16="0b1010000000000000", load="0b0", addr3="0b101") == "0b1010000000000000"
+        assert _ram8.evaluate(_in16="0b1100000000000000", load="0b0", addr3="0b110") == "0b1100000000000000"
+        assert _ram8.evaluate(_in16="0b1110000000000000", load="0b0", addr3="0b111") == "0b1110000000000000"
 
-    # RAM8: mixed load/set
-    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b1", addr3="0b000") == "0b0000000000000000"
-    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b1", addr3="0b001") == "0b0000000000000001"
-    assert _ram8.evaluate(_in16="0b0000000000000010", load="0b1", addr3="0b010") == "0b0000000000000010"
-    assert _ram8.evaluate(_in16="0b0000000000000011", load="0b1", addr3="0b011") == "0b0000000000000011"
-    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b000") == "0b0000000000000000"
-    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b0", addr3="0b001") == "0b0000000000000001"
-    assert _ram8.evaluate(_in16="0b0000000000000010", load="0b0", addr3="0b010") == "0b0000000000000010"
-    assert _ram8.evaluate(_in16="0b0000000000000011", load="0b0", addr3="0b011") == "0b0000000000000011"
-    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b1", addr3="0b100") == "0b1000000000000000"
-    assert _ram8.evaluate(_in16="0b1010000000000000", load="0b1", addr3="0b101") == "0b1010000000000000"
-    assert _ram8.evaluate(_in16="0b1100000000000000", load="0b1", addr3="0b110") == "0b1100000000000000"
-    assert _ram8.evaluate(_in16="0b1110000000000000", load="0b1", addr3="0b111") == "0b1110000000000000"
-    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b0", addr3="0b100") == "0b1000000000000000"
-    assert _ram8.evaluate(_in16="0b1010000000000000", load="0b0", addr3="0b101") == "0b1010000000000000"
-    assert _ram8.evaluate(_in16="0b1100000000000000", load="0b0", addr3="0b110") == "0b1100000000000000"
-    assert _ram8.evaluate(_in16="0b1110000000000000", load="0b0", addr3="0b111") == "0b1110000000000000"
+        # RAM8: mixed load/set
+        assert _ram8.evaluate(_in16="0b0000000000000000", load="0b1", addr3="0b000") == "0b0000000000000000"
+        assert _ram8.evaluate(_in16="0b0000000000000001", load="0b1", addr3="0b001") == "0b0000000000000001"
+        assert _ram8.evaluate(_in16="0b0000000000000010", load="0b1", addr3="0b010") == "0b0000000000000010"
+        assert _ram8.evaluate(_in16="0b0000000000000011", load="0b1", addr3="0b011") == "0b0000000000000011"
+        assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b000") == "0b0000000000000000"
+        assert _ram8.evaluate(_in16="0b0000000000000001", load="0b0", addr3="0b001") == "0b0000000000000001"
+        assert _ram8.evaluate(_in16="0b0000000000000010", load="0b0", addr3="0b010") == "0b0000000000000010"
+        assert _ram8.evaluate(_in16="0b0000000000000011", load="0b0", addr3="0b011") == "0b0000000000000011"
+        assert _ram8.evaluate(_in16="0b1000000000000000", load="0b1", addr3="0b100") == "0b1000000000000000"
+        assert _ram8.evaluate(_in16="0b1010000000000000", load="0b1", addr3="0b101") == "0b1010000000000000"
+        assert _ram8.evaluate(_in16="0b1100000000000000", load="0b1", addr3="0b110") == "0b1100000000000000"
+        assert _ram8.evaluate(_in16="0b1110000000000000", load="0b1", addr3="0b111") == "0b1110000000000000"
+        assert _ram8.evaluate(_in16="0b1000000000000000", load="0b0", addr3="0b100") == "0b1000000000000000"
+        assert _ram8.evaluate(_in16="0b1010000000000000", load="0b0", addr3="0b101") == "0b1010000000000000"
+        assert _ram8.evaluate(_in16="0b1100000000000000", load="0b0", addr3="0b110") == "0b1100000000000000"
+        assert _ram8.evaluate(_in16="0b1110000000000000", load="0b0", addr3="0b111") == "0b1110000000000000"
 
-    # RAM64: sequential set (000/XXX)
-    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b1", addr6="0b000000") == "0b0000000000000000"
-    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b1", addr6="0b000001") == "0b0000000000000001"
-    assert _ram64.evaluate(_in16="0b0000000000000010", load="0b1", addr6="0b000010") == "0b0000000000000010"
-    assert _ram64.evaluate(_in16="0b0000000000000011", load="0b1", addr6="0b000011") == "0b0000000000000011"
-    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b1", addr6="0b000100") == "0b1000000000000000"
-    assert _ram64.evaluate(_in16="0b1010000000000000", load="0b1", addr6="0b000101") == "0b1010000000000000"
-    assert _ram64.evaluate(_in16="0b1110000000000000", load="0b1", addr6="0b000110") == "0b1110000000000000"
-    assert _ram64.evaluate(_in16="0b1111000000000000", load="0b1", addr6="0b000111") == "0b1111000000000000"
+        # RAM64: sequential set (000/XXX)
+        assert _ram64.evaluate(_in16="0b0000000000000000", load="0b1", addr6="0b000000") == "0b0000000000000000"
+        assert _ram64.evaluate(_in16="0b0000000000000001", load="0b1", addr6="0b000001") == "0b0000000000000001"
+        assert _ram64.evaluate(_in16="0b0000000000000010", load="0b1", addr6="0b000010") == "0b0000000000000010"
+        assert _ram64.evaluate(_in16="0b0000000000000011", load="0b1", addr6="0b000011") == "0b0000000000000011"
+        assert _ram64.evaluate(_in16="0b1000000000000000", load="0b1", addr6="0b000100") == "0b1000000000000000"
+        assert _ram64.evaluate(_in16="0b1010000000000000", load="0b1", addr6="0b000101") == "0b1010000000000000"
+        assert _ram64.evaluate(_in16="0b1110000000000000", load="0b1", addr6="0b000110") == "0b1110000000000000"
+        assert _ram64.evaluate(_in16="0b1111000000000000", load="0b1", addr6="0b000111") == "0b1111000000000000"
 
-    # RAM64: sequential set (111/XXX)
-    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b1", addr6="0b111000") == "0b0000000000000000"
-    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b1", addr6="0b111001") == "0b0000000000000001"
-    assert _ram64.evaluate(_in16="0b0000000000000010", load="0b1", addr6="0b111010") == "0b0000000000000010"
-    assert _ram64.evaluate(_in16="0b0000000000000011", load="0b1", addr6="0b111011") == "0b0000000000000011"
-    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b1", addr6="0b111100") == "0b1000000000000000"
-    assert _ram64.evaluate(_in16="0b1010000000000000", load="0b1", addr6="0b111101") == "0b1010000000000000"
-    assert _ram64.evaluate(_in16="0b1110000000000000", load="0b1", addr6="0b111110") == "0b1110000000000000"
-    assert _ram64.evaluate(_in16="0b1111000000000000", load="0b1", addr6="0b111111") == "0b1111000000000000"
+        # RAM64: sequential set (111/XXX)
+        assert _ram64.evaluate(_in16="0b0000000000000000", load="0b1", addr6="0b111000") == "0b0000000000000000"
+        assert _ram64.evaluate(_in16="0b0000000000000001", load="0b1", addr6="0b111001") == "0b0000000000000001"
+        assert _ram64.evaluate(_in16="0b0000000000000010", load="0b1", addr6="0b111010") == "0b0000000000000010"
+        assert _ram64.evaluate(_in16="0b0000000000000011", load="0b1", addr6="0b111011") == "0b0000000000000011"
+        assert _ram64.evaluate(_in16="0b1000000000000000", load="0b1", addr6="0b111100") == "0b1000000000000000"
+        assert _ram64.evaluate(_in16="0b1010000000000000", load="0b1", addr6="0b111101") == "0b1010000000000000"
+        assert _ram64.evaluate(_in16="0b1110000000000000", load="0b1", addr6="0b111110") == "0b1110000000000000"
+        assert _ram64.evaluate(_in16="0b1111000000000000", load="0b1", addr6="0b111111") == "0b1111000000000000"
 
-    # RAM64: sequential load (000/XXX)
-    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b000000") == "0b0000000000000000"
-    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b0", addr6="0b000001") == "0b0000000000000001"
-    assert _ram64.evaluate(_in16="0b0000000000000010", load="0b0", addr6="0b000010") == "0b0000000000000010"
-    assert _ram64.evaluate(_in16="0b0000000000000011", load="0b0", addr6="0b000011") == "0b0000000000000011"
-    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b0", addr6="0b000100") == "0b1000000000000000"
-    assert _ram64.evaluate(_in16="0b1010000000000000", load="0b0", addr6="0b000101") == "0b1010000000000000"
-    assert _ram64.evaluate(_in16="0b1110000000000000", load="0b0", addr6="0b000110") == "0b1110000000000000"
-    assert _ram64.evaluate(_in16="0b1111000000000000", load="0b0", addr6="0b000111") == "0b1111000000000000"
+        # RAM64: sequential load (000/XXX)
+        assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b000000") == "0b0000000000000000"
+        assert _ram64.evaluate(_in16="0b0000000000000001", load="0b0", addr6="0b000001") == "0b0000000000000001"
+        assert _ram64.evaluate(_in16="0b0000000000000010", load="0b0", addr6="0b000010") == "0b0000000000000010"
+        assert _ram64.evaluate(_in16="0b0000000000000011", load="0b0", addr6="0b000011") == "0b0000000000000011"
+        assert _ram64.evaluate(_in16="0b1000000000000000", load="0b0", addr6="0b000100") == "0b1000000000000000"
+        assert _ram64.evaluate(_in16="0b1010000000000000", load="0b0", addr6="0b000101") == "0b1010000000000000"
+        assert _ram64.evaluate(_in16="0b1110000000000000", load="0b0", addr6="0b000110") == "0b1110000000000000"
+        assert _ram64.evaluate(_in16="0b1111000000000000", load="0b0", addr6="0b000111") == "0b1111000000000000"
 
-    # RAM64: sequential load (111/XXX)
-    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b111000") == "0b0000000000000000"
-    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b0", addr6="0b111001") == "0b0000000000000001"
-    assert _ram64.evaluate(_in16="0b0000000000000010", load="0b0", addr6="0b111010") == "0b0000000000000010"
-    assert _ram64.evaluate(_in16="0b0000000000000011", load="0b0", addr6="0b111011") == "0b0000000000000011"
-    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b0", addr6="0b111100") == "0b1000000000000000"
-    assert _ram64.evaluate(_in16="0b1010000000000000", load="0b0", addr6="0b111101") == "0b1010000000000000"
-    assert _ram64.evaluate(_in16="0b1110000000000000", load="0b0", addr6="0b111110") == "0b1110000000000000"
-    assert _ram64.evaluate(_in16="0b1111000000000000", load="0b0", addr6="0b111111") == "0b1111000000000000"
+        # RAM64: sequential load (111/XXX)
+        assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b111000") == "0b0000000000000000"
+        assert _ram64.evaluate(_in16="0b0000000000000001", load="0b0", addr6="0b111001") == "0b0000000000000001"
+        assert _ram64.evaluate(_in16="0b0000000000000010", load="0b0", addr6="0b111010") == "0b0000000000000010"
+        assert _ram64.evaluate(_in16="0b0000000000000011", load="0b0", addr6="0b111011") == "0b0000000000000011"
+        assert _ram64.evaluate(_in16="0b1000000000000000", load="0b0", addr6="0b111100") == "0b1000000000000000"
+        assert _ram64.evaluate(_in16="0b1010000000000000", load="0b0", addr6="0b111101") == "0b1010000000000000"
+        assert _ram64.evaluate(_in16="0b1110000000000000", load="0b0", addr6="0b111110") == "0b1110000000000000"
+        assert _ram64.evaluate(_in16="0b1111000000000000", load="0b0", addr6="0b111111") == "0b1111000000000000"
 
-    # RAM512: sequential set (000/XXX)
-    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b1", addr9="0b000000000") == "0b0000000000000000"
-    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b000000001") == "0b0000000000000001"
-    assert _ram512.evaluate(_in16="0b0000000000000010", load="0b1", addr9="0b000000010") == "0b0000000000000010"
-    assert _ram512.evaluate(_in16="0b0000000000000011", load="0b1", addr9="0b000000111") == "0b0000000000000011"
-    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b000001100") == "0b1000000000000000"
-    assert _ram512.evaluate(_in16="0b1010000000000000", load="0b1", addr9="0b000011101") == "0b1010000000000000"
-    assert _ram512.evaluate(_in16="0b1110000000000000", load="0b1", addr9="0b000111110") == "0b1110000000000000"
-    assert _ram512.evaluate(_in16="0b1111000000000000", load="0b1", addr9="0b001111111") == "0b1111000000000000"
+        # RAM512: sequential set (000/XXX)
+        assert _ram512.evaluate(_in16="0b0000000000000000", load="0b1", addr9="0b000000000") == "0b0000000000000000"
+        assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b000000001") == "0b0000000000000001"
+        assert _ram512.evaluate(_in16="0b0000000000000010", load="0b1", addr9="0b000000010") == "0b0000000000000010"
+        assert _ram512.evaluate(_in16="0b0000000000000011", load="0b1", addr9="0b000000111") == "0b0000000000000011"
+        assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b000001100") == "0b1000000000000000"
+        assert _ram512.evaluate(_in16="0b1010000000000000", load="0b1", addr9="0b000011101") == "0b1010000000000000"
+        assert _ram512.evaluate(_in16="0b1110000000000000", load="0b1", addr9="0b000111110") == "0b1110000000000000"
+        assert _ram512.evaluate(_in16="0b1111000000000000", load="0b1", addr9="0b001111111") == "0b1111000000000000"
 
-    # RAM512: sequential set (111/XXX)
-    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b1", addr9="0b111111000") == "0b0000000000000000"
-    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b111110001") == "0b0000000000000001"
-    assert _ram512.evaluate(_in16="0b0000000000000010", load="0b1", addr9="0b111100010") == "0b0000000000000010"
-    assert _ram512.evaluate(_in16="0b0000000000000011", load="0b1", addr9="0b111000011") == "0b0000000000000011"
-    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b110000000") == "0b1000000000000000"
-    assert _ram512.evaluate(_in16="0b1010000000000000", load="0b1", addr9="0b111111101") == "0b1010000000000000"
-    assert _ram512.evaluate(_in16="0b1110000000000000", load="0b1", addr9="0b111111110") == "0b1110000000000000"
-    assert _ram512.evaluate(_in16="0b1111000000000000", load="0b1", addr9="0b111111111") == "0b1111000000000000"
+        # RAM512: sequential set (111/XXX)
+        assert _ram512.evaluate(_in16="0b0000000000000000", load="0b1", addr9="0b111111000") == "0b0000000000000000"
+        assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b111110001") == "0b0000000000000001"
+        assert _ram512.evaluate(_in16="0b0000000000000010", load="0b1", addr9="0b111100010") == "0b0000000000000010"
+        assert _ram512.evaluate(_in16="0b0000000000000011", load="0b1", addr9="0b111000011") == "0b0000000000000011"
+        assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b110000000") == "0b1000000000000000"
+        assert _ram512.evaluate(_in16="0b1010000000000000", load="0b1", addr9="0b111111101") == "0b1010000000000000"
+        assert _ram512.evaluate(_in16="0b1110000000000000", load="0b1", addr9="0b111111110") == "0b1110000000000000"
+        assert _ram512.evaluate(_in16="0b1111000000000000", load="0b1", addr9="0b111111111") == "0b1111000000000000"
 
-    # RAM512: sequential load (000/XXX)
-    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b000000000") == "0b0000000000000000"
-    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b0", addr9="0b000000001") == "0b0000000000000001"
-    assert _ram512.evaluate(_in16="0b0000000000000010", load="0b0", addr9="0b000000010") == "0b0000000000000010"
-    assert _ram512.evaluate(_in16="0b0000000000000011", load="0b0", addr9="0b000000111") == "0b0000000000000011"
-    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b0", addr9="0b000001100") == "0b1000000000000000"
-    assert _ram512.evaluate(_in16="0b1010000000000000", load="0b0", addr9="0b000011101") == "0b1010000000000000"
-    assert _ram512.evaluate(_in16="0b1110000000000000", load="0b0", addr9="0b000111110") == "0b1110000000000000"
-    assert _ram512.evaluate(_in16="0b1111000000000000", load="0b0", addr9="0b001111111") == "0b1111000000000000"
+        # RAM512: sequential load (000/XXX)
+        assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b000000000") == "0b0000000000000000"
+        assert _ram512.evaluate(_in16="0b0000000000000001", load="0b0", addr9="0b000000001") == "0b0000000000000001"
+        assert _ram512.evaluate(_in16="0b0000000000000010", load="0b0", addr9="0b000000010") == "0b0000000000000010"
+        assert _ram512.evaluate(_in16="0b0000000000000011", load="0b0", addr9="0b000000111") == "0b0000000000000011"
+        assert _ram512.evaluate(_in16="0b1000000000000000", load="0b0", addr9="0b000001100") == "0b1000000000000000"
+        assert _ram512.evaluate(_in16="0b1010000000000000", load="0b0", addr9="0b000011101") == "0b1010000000000000"
+        assert _ram512.evaluate(_in16="0b1110000000000000", load="0b0", addr9="0b000111110") == "0b1110000000000000"
+        assert _ram512.evaluate(_in16="0b1111000000000000", load="0b0", addr9="0b001111111") == "0b1111000000000000"
 
-    # RAM512: sequential load (111/XXX)
-    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b111111000") == "0b0000000000000000"
-    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b0", addr9="0b111110001") == "0b0000000000000001"
-    assert _ram512.evaluate(_in16="0b0000000000000010", load="0b0", addr9="0b111100010") == "0b0000000000000010"
-    assert _ram512.evaluate(_in16="0b0000000000000011", load="0b0", addr9="0b111000011") == "0b0000000000000011"
-    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b0", addr9="0b110000000") == "0b1000000000000000"
-    assert _ram512.evaluate(_in16="0b1010000000000000", load="0b0", addr9="0b111111101") == "0b1010000000000000"
-    assert _ram512.evaluate(_in16="0b1110000000000000", load="0b0", addr9="0b111111110") == "0b1110000000000000"
-    assert _ram512.evaluate(_in16="0b1111000000000000", load="0b0", addr9="0b111111111") == "0b1111000000000000"
+        # RAM512: sequential load (111/XXX)
+        assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b111111000") == "0b0000000000000000"
+        assert _ram512.evaluate(_in16="0b0000000000000001", load="0b0", addr9="0b111110001") == "0b0000000000000001"
+        assert _ram512.evaluate(_in16="0b0000000000000010", load="0b0", addr9="0b111100010") == "0b0000000000000010"
+        assert _ram512.evaluate(_in16="0b0000000000000011", load="0b0", addr9="0b111000011") == "0b0000000000000011"
+        assert _ram512.evaluate(_in16="0b1000000000000000", load="0b0", addr9="0b110000000") == "0b1000000000000000"
+        assert _ram512.evaluate(_in16="0b1010000000000000", load="0b0", addr9="0b111111101") == "0b1010000000000000"
+        assert _ram512.evaluate(_in16="0b1110000000000000", load="0b0", addr9="0b111111110") == "0b1110000000000000"
+        assert _ram512.evaluate(_in16="0b1111000000000000", load="0b0", addr9="0b111111111") == "0b1111000000000000"
 
-    # RAM4K: sequential set (000/XXX)
-    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b1", addr12="0b000000000000") == "0b0000000000000000"
-    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b000000000001") == "0b0000000000000001"
-    assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b1", addr12="0b000000000010") == "0b0000000000000010"
-    assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b1", addr12="0b000000000111") == "0b0000000000000011"
-    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b000000001100") == "0b1000000000000000"
-    assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b1", addr12="0b000000011101") == "0b1010000000000000"
-    assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b1", addr12="0b000001111110") == "0b1110000000000000"
-    assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b1", addr12="0b000011111111") == "0b1111000000000000"
+        # RAM4K: sequential set (000/XXX)
+        assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b1", addr12="0b000000000000") == "0b0000000000000000"
+        assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b000000000001") == "0b0000000000000001"
+        assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b1", addr12="0b000000000010") == "0b0000000000000010"
+        assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b1", addr12="0b000000000111") == "0b0000000000000011"
+        assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b000000001100") == "0b1000000000000000"
+        assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b1", addr12="0b000000011101") == "0b1010000000000000"
+        assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b1", addr12="0b000001111110") == "0b1110000000000000"
+        assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b1", addr12="0b000011111111") == "0b1111000000000000"
 
-    # RAM4K: sequential set (111/XXX)
-    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b1", addr12="0b111111111000") == "0b0000000000000000"
-    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b111111110001") == "0b0000000000000001"
-    assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b1", addr12="0b111111100010") == "0b0000000000000010"
-    assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b1", addr12="0b111111000011") == "0b0000000000000011"
-    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b111110000000") == "0b1000000000000000"
-    assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b1", addr12="0b111111111101") == "0b1010000000000000"
-    assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b1", addr12="0b111111111110") == "0b1110000000000000"
-    assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b1", addr12="0b111111111111") == "0b1111000000000000"
+        # RAM4K: sequential set (111/XXX)
+        assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b1", addr12="0b111111111000") == "0b0000000000000000"
+        assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b111111110001") == "0b0000000000000001"
+        assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b1", addr12="0b111111100010") == "0b0000000000000010"
+        assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b1", addr12="0b111111000011") == "0b0000000000000011"
+        assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b111110000000") == "0b1000000000000000"
+        assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b1", addr12="0b111111111101") == "0b1010000000000000"
+        assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b1", addr12="0b111111111110") == "0b1110000000000000"
+        assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b1", addr12="0b111111111111") == "0b1111000000000000"
 
-    # RAM4K: sequential load (000/XXX)
-    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b000000000000") == "0b0000000000000000"
-    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b0", addr12="0b000000000001") == "0b0000000000000001"
-    assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b0", addr12="0b000000000010") == "0b0000000000000010"
-    assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b0", addr12="0b000000000111") == "0b0000000000000011"
-    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b0", addr12="0b000000001100") == "0b1000000000000000"
-    assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b0", addr12="0b000000011101") == "0b1010000000000000"
-    assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b0", addr12="0b000001111110") == "0b1110000000000000"
-    assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b0", addr12="0b000011111111") == "0b1111000000000000"
+        # RAM4K: sequential load (000/XXX)
+        assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b000000000000") == "0b0000000000000000"
+        assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b0", addr12="0b000000000001") == "0b0000000000000001"
+        assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b0", addr12="0b000000000010") == "0b0000000000000010"
+        assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b0", addr12="0b000000000111") == "0b0000000000000011"
+        assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b0", addr12="0b000000001100") == "0b1000000000000000"
+        assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b0", addr12="0b000000011101") == "0b1010000000000000"
+        assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b0", addr12="0b000001111110") == "0b1110000000000000"
+        assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b0", addr12="0b000011111111") == "0b1111000000000000"
 
-    # RAM4K: sequential load (111/XXX)
-    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b111111111000") == "0b0000000000000000"
-    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b0", addr12="0b111111110001") == "0b0000000000000001"
-    assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b0", addr12="0b111111100010") == "0b0000000000000010"
-    assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b0", addr12="0b111111000011") == "0b0000000000000011"
-    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b0", addr12="0b111110000000") == "0b1000000000000000"
-    assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b0", addr12="0b111111111101") == "0b1010000000000000"
-    assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b0", addr12="0b111111111110") == "0b1110000000000000"
-    assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b0", addr12="0b111111111111") == "0b1111000000000000"
+        # RAM4K: sequential load (111/XXX)
+        assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b111111111000") == "0b0000000000000000"
+        assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b0", addr12="0b111111110001") == "0b0000000000000001"
+        assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b0", addr12="0b111111100010") == "0b0000000000000010"
+        assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b0", addr12="0b111111000011") == "0b0000000000000011"
+        assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b0", addr12="0b111110000000") == "0b1000000000000000"
+        assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b0", addr12="0b111111111101") == "0b1010000000000000"
+        assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b0", addr12="0b111111111110") == "0b1110000000000000"
+        assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b0", addr12="0b111111111111") == "0b1111000000000000"
 
-    # RAM16K: sequential set (000/XXX)
-    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b1", addr14="0b00000000000000") == "0b0000000000000000"
-    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b00000000000001") == "0b0000000000000001"
-    assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b1", addr14="0b00000000000010") == "0b0000000000000010"
-    assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b1", addr14="0b00000000000111") == "0b0000000000000011"
-    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b00000000001100") == "0b1000000000000000"
-    assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b1", addr14="0b00000000011101") == "0b1010000000000000"
-    assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b1", addr14="0b00000001111110") == "0b1110000000000000"
-    assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b1", addr14="0b00000011111111") == "0b1111000000000000"
+        # RAM16K: sequential set (000/XXX)
+        assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b1", addr14="0b00000000000000") == "0b0000000000000000"
+        assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b00000000000001") == "0b0000000000000001"
+        assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b1", addr14="0b00000000000010") == "0b0000000000000010"
+        assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b1", addr14="0b00000000000111") == "0b0000000000000011"
+        assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b00000000001100") == "0b1000000000000000"
+        assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b1", addr14="0b00000000011101") == "0b1010000000000000"
+        assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b1", addr14="0b00000001111110") == "0b1110000000000000"
+        assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b1", addr14="0b00000011111111") == "0b1111000000000000"
 
-    # RAM16K: sequential set (111/XXX)
-    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b1", addr14="0b11111111111000") == "0b0000000000000000"
-    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b11111111110001") == "0b0000000000000001"
-    assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b1", addr14="0b11111111100010") == "0b0000000000000010"
-    assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b1", addr14="0b11111111000011") == "0b0000000000000011"
-    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b11111110000000") == "0b1000000000000000"
-    assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b1", addr14="0b11111111111101") == "0b1010000000000000"
-    assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b1", addr14="0b11111111111110") == "0b1110000000000000"
-    assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b1", addr14="0b11111111111111") == "0b1111000000000000"
+        # RAM16K: sequential set (111/XXX)
+        assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b1", addr14="0b11111111111000") == "0b0000000000000000"
+        assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b11111111110001") == "0b0000000000000001"
+        assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b1", addr14="0b11111111100010") == "0b0000000000000010"
+        assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b1", addr14="0b11111111000011") == "0b0000000000000011"
+        assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b11111110000000") == "0b1000000000000000"
+        assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b1", addr14="0b11111111111101") == "0b1010000000000000"
+        assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b1", addr14="0b11111111111110") == "0b1110000000000000"
+        assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b1", addr14="0b11111111111111") == "0b1111000000000000"
 
-    # RAM16K: sequential load (000/XXX)
-    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b00000000000000") == "0b0000000000000000"
-    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b0", addr14="0b00000000000001") == "0b0000000000000001"
-    assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b0", addr14="0b00000000000010") == "0b0000000000000010"
-    assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b0", addr14="0b00000000000111") == "0b0000000000000011"
-    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b0", addr14="0b00000000001100") == "0b1000000000000000"
-    assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b0", addr14="0b00000000011101") == "0b1010000000000000"
-    assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b0", addr14="0b00000001111110") == "0b1110000000000000"
-    assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b0", addr14="0b00000011111111") == "0b1111000000000000"
+        # RAM16K: sequential load (000/XXX)
+        assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b00000000000000") == "0b0000000000000000"
+        assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b0", addr14="0b00000000000001") == "0b0000000000000001"
+        assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b0", addr14="0b00000000000010") == "0b0000000000000010"
+        assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b0", addr14="0b00000000000111") == "0b0000000000000011"
+        assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b0", addr14="0b00000000001100") == "0b1000000000000000"
+        assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b0", addr14="0b00000000011101") == "0b1010000000000000"
+        assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b0", addr14="0b00000001111110") == "0b1110000000000000"
+        assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b0", addr14="0b00000011111111") == "0b1111000000000000"
 
-    # RAM16K: sequential load (111/XXX)
-    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b11111111111000") == "0b0000000000000000"
-    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b0", addr14="0b11111111110001") == "0b0000000000000001"
-    assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b0", addr14="0b11111111100010") == "0b0000000000000010"
-    assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b0", addr14="0b11111111000011") == "0b0000000000000011"
-    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b0", addr14="0b11111110000000") == "0b1000000000000000"
-    assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b0", addr14="0b11111111111101") == "0b1010000000000000"
-    assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b0", addr14="0b11111111111110") == "0b1110000000000000"
-    assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b0", addr14="0b11111111111111") == "0b1111000000000000"
+        # RAM16K: sequential load (111/XXX)
+        assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b11111111111000") == "0b0000000000000000"
+        assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b0", addr14="0b11111111110001") == "0b0000000000000001"
+        assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b0", addr14="0b11111111100010") == "0b0000000000000010"
+        assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b0", addr14="0b11111111000011") == "0b0000000000000011"
+        assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b0", addr14="0b11111110000000") == "0b1000000000000000"
+        assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b0", addr14="0b11111111111101") == "0b1010000000000000"
+        assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b0", addr14="0b11111111111110") == "0b1110000000000000"
+        assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b0", addr14="0b11111111111111") == "0b1111000000000000"
+
+        # 3 bit input, 1 bit select, 2 x 3 bit output dmux
+        assert _dmux3.evaluate(_in3="0b000", sel="0b0") == ("0b000", "0b000")
+        assert _dmux3.evaluate(_in3="0b001", sel="0b0") == ("0b001", "0b000")
+        assert _dmux3.evaluate(_in3="0b010", sel="0b0") == ("0b010", "0b000")
+        assert _dmux3.evaluate(_in3="0b011", sel="0b0") == ("0b011", "0b000")
+        assert _dmux3.evaluate(_in3="0b100", sel="0b0") == ("0b100", "0b000")
+        assert _dmux3.evaluate(_in3="0b101", sel="0b0") == ("0b101", "0b000")
+        assert _dmux3.evaluate(_in3="0b110", sel="0b0") == ("0b110", "0b000")
+        assert _dmux3.evaluate(_in3="0b111", sel="0b0") == ("0b111", "0b000")
+
+        assert _dmux3.evaluate(_in3="0b000", sel="0b1") == ("0b000", "0b000")
+        assert _dmux3.evaluate(_in3="0b001", sel="0b1") == ("0b000", "0b001")
+        assert _dmux3.evaluate(_in3="0b010", sel="0b1") == ("0b000", "0b010")
+        assert _dmux3.evaluate(_in3="0b011", sel="0b1") == ("0b000", "0b011")
+        assert _dmux3.evaluate(_in3="0b100", sel="0b1") == ("0b000", "0b100")
+        assert _dmux3.evaluate(_in3="0b101", sel="0b1") == ("0b000", "0b101")
+        assert _dmux3.evaluate(_in3="0b110", sel="0b1") == ("0b000", "0b110")
+        assert _dmux3.evaluate(_in3="0b111", sel="0b1") == ("0b000", "0b111")
 
 
 if __name__ == "__main__":
-    main()
+    main(test_all=True)
