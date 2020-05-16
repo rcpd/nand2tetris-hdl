@@ -897,7 +897,7 @@ class Register(Gate):
         Bit(in=in[15], load=load, out=out[15]);
     }
     """
-    def __init__(self, watermark=None):
+    def __init__(self, name=None):
         super().__init__()
         self.bit0 = Bit()
         self.bit1 = Bit()
@@ -916,11 +916,11 @@ class Register(Gate):
         self.bit14 = Bit()
         self.bit15 = Bit()
         self.d_out = "0b0000000000000000"
-        self.watermark = watermark
+        self.name = name
 
     def calculate(self):
         # can't use range as Register has to save state
-        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+        # print("\ninputs:", self.name, self._in16, self.load, self.addr6)
         self.bit0.evaluate(_in="0b"+self._in16[2], load=self.load)
         self.bit1.evaluate(_in="0b"+self._in16[3], load=self.load)
         self.bit2.evaluate(_in="0b"+self._in16[4], load=self.load)
@@ -941,7 +941,7 @@ class Register(Gate):
                      + self.bit4.d_out[2:] + self.bit5.d_out[2:] + self.bit6.d_out[2:] + self.bit7.d_out[2:] \
                      + self.bit8.d_out[2:] + self.bit9.d_out[2:] + self.bit10.d_out[2:] + self.bit11.d_out[2:] \
                      + self.bit12.d_out[2:] + self.bit13.d_out[2:] + self.bit14.d_out[2:] + self.bit15.d_out[2:]
-        # print(self.watermark, self.d_out)
+        # print(self.name, self.d_out)
         return self.d_out
 
 
@@ -1002,17 +1002,17 @@ class RAM8(Gate):
         Mux8Way16(a=r0Out, b=r1Out, c=r2Out, d=r3Out, e=r4Out, f=r5Out, g=r6Out, h=r7Out, sel=address, out=out);
     }
     """
-    def __init__(self, watermark=None):
+    def __init__(self, name=None):
         super().__init__()
-        self.watermark = watermark
-        self.r0 = Register(watermark="r0")
-        self.r1 = Register(watermark="r1")
-        self.r2 = Register(watermark="r2")
-        self.r3 = Register(watermark="r3")
-        self.r4 = Register(watermark="r4")
-        self.r5 = Register(watermark="r5")
-        self.r6 = Register(watermark="r6")
-        self.r7 = Register(watermark="r7")
+        self.name = name
+        self.r0 = Register(name="r0")
+        self.r1 = Register(name="r1")
+        self.r2 = Register(name="r2")
+        self.r3 = Register(name="r3")
+        self.r4 = Register(name="r4")
+        self.r5 = Register(name="r5")
+        self.r6 = Register(name="r6")
+        self.r7 = Register(name="r7")
         self.r0_out = "0b0000000000000000"
         self.r1_out = "0b0000000000000000"
         self.r2_out = "0b0000000000000000"
@@ -1025,7 +1025,7 @@ class RAM8(Gate):
 
     def calculate(self):
         # only evaluate selected Register (python performance optimisation)
-        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+        # print("\ninputs:", self.name, self._in16, self.load, self.addr6)
         dmux8w = DMux8Way().evaluate(_in=self.load, sel3=self.addr3)
         if self.addr3 == "0b000":
             self.r0_out = self.r0.evaluate(_in16=self._in16, load=dmux8w[0])
@@ -1049,7 +1049,7 @@ class RAM8(Gate):
         self.d_out = Mux8Way16().evaluate(a16=self.r0_out, b16=self.r1_out, c16=self.r2_out, d16=self.r3_out,
                                           e16=self.r4_out, f16=self.r5_out, g16=self.r6_out, h16=self.r7_out,
                                           sel3=self.addr3)
-        # print(self.watermark, self.d_out)
+        # print(self.name, self.d_out)
         return self.d_out
 
 
@@ -1076,17 +1076,17 @@ class RAM64(Gate):
         Mux8Way16(a=r0Out, b=r1Out, c=r2Out, d=r3Out, e=r4Out, f=r5Out, g=r6Out, h=r7Out, sel=address[0..2], out=out);
     }
     """
-    def __init__(self, watermark=None):
+    def __init__(self, name=None):
         super().__init__()
-        self.watermark = watermark
-        self.ram8_0 = RAM8(watermark="ram8_0")
-        self.ram8_1 = RAM8(watermark="ram8_1")
-        self.ram8_2 = RAM8(watermark="ram8_2")
-        self.ram8_3 = RAM8(watermark="ram8_3")
-        self.ram8_4 = RAM8(watermark="ram8_4")
-        self.ram8_5 = RAM8(watermark="ram8_5")
-        self.ram8_6 = RAM8(watermark="ram8_6")
-        self.ram8_7 = RAM8(watermark="ram8_7")
+        self.name = name
+        self.ram8_0 = RAM8(name="ram8_0")
+        self.ram8_1 = RAM8(name="ram8_1")
+        self.ram8_2 = RAM8(name="ram8_2")
+        self.ram8_3 = RAM8(name="ram8_3")
+        self.ram8_4 = RAM8(name="ram8_4")
+        self.ram8_5 = RAM8(name="ram8_5")
+        self.ram8_6 = RAM8(name="ram8_6")
+        self.ram8_7 = RAM8(name="ram8_7")
         self.ram8_0_out = "0b0000000000000000"
         self.ram8_1_out = "0b0000000000000000"
         self.ram8_2_out = "0b0000000000000000"
@@ -1100,7 +1100,7 @@ class RAM64(Gate):
     def calculate(self):
         # 3 MSB = RAM8 block, 3 LSB = Register
         # only evaluate selected RAM8 block (python performance optimisation)
-        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+        # print("\ninputs:", self.name, self._in16, self.load, self.addr6)
         dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr6[-6:-3])
         if "0b"+self.addr6[-6:-3] == "0b000":
             self.ram8_0_out = self.ram8_0.evaluate(_in16=self._in16, load=dmux8w[0], addr3="0b"+self.addr6[-3:])
@@ -1155,17 +1155,17 @@ class RAM512(Gate):
         Mux8Way16(a=r0out, b=r1out, c=r2out, d=r3out, e=r4out, f=r5out, g=r6out, h=r7out, sel=address[0..2], out=out);
     }
     """
-    def __init__(self, watermark=None):
+    def __init__(self, name=None):
         super().__init__()
-        self.watermark = watermark
-        self.ram64_0 = RAM64(watermark="ram64_0")
-        self.ram64_1 = RAM64(watermark="ram64_1")
-        self.ram64_2 = RAM64(watermark="ram64_2")
-        self.ram64_3 = RAM64(watermark="ram64_3")
-        self.ram64_4 = RAM64(watermark="ram64_4")
-        self.ram64_5 = RAM64(watermark="ram64_5")
-        self.ram64_6 = RAM64(watermark="ram64_6")
-        self.ram64_7 = RAM64(watermark="ram64_7")
+        self.name = name
+        self.ram64_0 = RAM64(name="ram64_0")
+        self.ram64_1 = RAM64(name="ram64_1")
+        self.ram64_2 = RAM64(name="ram64_2")
+        self.ram64_3 = RAM64(name="ram64_3")
+        self.ram64_4 = RAM64(name="ram64_4")
+        self.ram64_5 = RAM64(name="ram64_5")
+        self.ram64_6 = RAM64(name="ram64_6")
+        self.ram64_7 = RAM64(name="ram64_7")
         self.ram64_0_out = "0b0000000000000000"
         self.ram64_1_out = "0b0000000000000000"
         self.ram64_2_out = "0b0000000000000000"
@@ -1180,7 +1180,7 @@ class RAM512(Gate):
         # 3 MSB = RAM64 block, 6 LSB = RAM8>Register blocks
         # only evaluate selected RAM64 block (python performance optimisation)
 
-        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr9)
+        # print("\ninputs:", self.name, self._in16, self.load, self.addr9)
 
         dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr9[-9:-6])
         if "0b"+self.addr9[-9:-6] == "0b000":
@@ -1210,7 +1210,7 @@ class RAM512(Gate):
             e16=self.ram64_4_out, f16=self.ram64_5_out, g16=self.ram64_6_out, h16=self.ram64_7_out,
             sel3="0b"+self.addr9[-9:-6])
 
-        # print(self.watermark, self.ram64_d_out)
+        # print(self.name, self.ram64_d_out)
         return self.ram64_d_out
 
 
@@ -1237,17 +1237,17 @@ class RAM4K(Gate):
         Mux8Way16(a=r0out, b=r1out, c=r2out, d=r3out, e=r4out, f=r5out, g=r6out, h=r7out, sel=address[0..2], out=out);
     }
     """
-    def __init__(self, watermark=None):
+    def __init__(self, name=None):
         super().__init__()
-        self.watermark = watermark
-        self.ram512_0 = RAM512(watermark="ram512_0")
-        self.ram512_1 = RAM512(watermark="ram512_1")
-        self.ram512_2 = RAM512(watermark="ram512_2")
-        self.ram512_3 = RAM512(watermark="ram512_3")
-        self.ram512_4 = RAM512(watermark="ram512_4")
-        self.ram512_5 = RAM512(watermark="ram512_5")
-        self.ram512_6 = RAM512(watermark="ram512_6")
-        self.ram512_7 = RAM512(watermark="ram512_7")
+        self.name = name
+        self.ram512_0 = RAM512(name="ram512_0")
+        self.ram512_1 = RAM512(name="ram512_1")
+        self.ram512_2 = RAM512(name="ram512_2")
+        self.ram512_3 = RAM512(name="ram512_3")
+        self.ram512_4 = RAM512(name="ram512_4")
+        self.ram512_5 = RAM512(name="ram512_5")
+        self.ram512_6 = RAM512(name="ram512_6")
+        self.ram512_7 = RAM512(name="ram512_7")
         self.ram512_0_out = "0b0000000000000000"
         self.ram512_1_out = "0b0000000000000000"
         self.ram512_2_out = "0b0000000000000000"
@@ -1262,7 +1262,7 @@ class RAM4K(Gate):
         # 3 MSB = RAM512 block, 9 LSB = RAM64>RAM8>Register blocks
         # only evaluate selected RAM512 block (python performance optimisation)
 
-        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+        # print("\ninputs:", self.name, self._in16, self.load, self.addr6)
 
         dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr12[-12:-9])
         if "0b"+self.addr12[-12:-9] == "0b000":
@@ -1292,7 +1292,7 @@ class RAM4K(Gate):
             e16=self.ram512_4_out, f16=self.ram512_5_out, g16=self.ram512_6_out, h16=self.ram512_7_out,
             sel3="0b"+self.addr12[-12:-9])
 
-        # print(self.watermark, self.ram512_d_out)
+        # print(self.name, self.ram512_d_out)
         return self.ram512_d_out
 
 
@@ -1315,13 +1315,13 @@ class RAM16K(Gate):
         Mux4Way16(a=r0out, b=r1out, c=r2out, d=r3out, sel=address[0..1], out=out);
     }
     """
-    def __init__(self, watermark=None):
+    def __init__(self, name=None):
         super().__init__()
-        self.watermark = watermark
-        self.ram4k_0 = RAM4K(watermark="ram4k_0")
-        self.ram4k_1 = RAM4K(watermark="ram4k_1")
-        self.ram4k_2 = RAM4K(watermark="ram4k_2")
-        self.ram4k_3 = RAM4K(watermark="ram4k_3")
+        self.name = name
+        self.ram4k_0 = RAM4K(name="ram4k_0")
+        self.ram4k_1 = RAM4K(name="ram4k_1")
+        self.ram4k_2 = RAM4K(name="ram4k_2")
+        self.ram4k_3 = RAM4K(name="ram4k_3")
         self.ram4k_0_out = "0b0000000000000000"
         self.ram4k_1_out = "0b0000000000000000"
         self.ram4k_2_out = "0b0000000000000000"
@@ -1332,7 +1332,7 @@ class RAM16K(Gate):
         # 2 MSB = RAM4K block, 12 LSB = RAM512>RAM64>RAM8>Register blocks
         # only evaluate selected RAM512 block (python performance optimisation)
 
-        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr14)
+        # print("\ninputs:", self.name, self._in16, self.load, self.addr14)
 
         dmux4w = DMux4Way().evaluate(_in=self.load, sel2="0b"+self.addr14[-14:-12])
         if "0b"+self.addr14[-14:-12] == "0b00":
@@ -1352,7 +1352,7 @@ class RAM16K(Gate):
             a16=self.ram4k_0_out, b16=self.ram4k_1_out, c16=self.ram4k_2_out, d16=self.ram4k_3_out,
             sel2="0b"+self.addr14[-14:-12])
 
-        # print(self.watermark, self.ram4k_d_out)
+        # print(self.name, self.ram4k_d_out)
         return self.ram4k_d_out
 
 
@@ -1432,11 +1432,11 @@ class Screen(Gate):
     // No HDL, implemented in Java on the course
     // Screen(in=in[16],load=load,address=[13],out=out[16]);
     """
-    def __init__(self, watermark=None):
+    def __init__(self, name=None):
         super().__init__()
-        self.watermark = watermark
-        self.ram4k_0 = RAM4K(watermark="screen_ram4k_0")
-        self.ram4k_1 = RAM4K(watermark="screen_ram4k_1")
+        self.name = name
+        self.ram4k_0 = RAM4K(name="screen_ram4k_0")
+        self.ram4k_1 = RAM4K(name="screen_ram4k_1")
         self.ram4k_0_out = "0b0000000000000000"
         self.ram4k_1_out = "0b0000000000000000"
         self.screen_out = "0b0000000000000000"
@@ -1445,7 +1445,7 @@ class Screen(Gate):
         # MSB = RAM4K selector
         # only evaluate selected RAM4K block (python performance optimisation)
 
-        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr14)
+        # print("\ninputs:", self.name, self._in16, self.load, self.addr14)
         
         dmux = DMux().evaluate(_in=self.load, sel="0b"+self.addr13[-13])
         
@@ -1460,7 +1460,7 @@ class Screen(Gate):
 
         self.screen_out = Mux16().evaluate(a16=self.ram4k_0_out, b16=self.ram4k_1_out, sel="0b"+self.addr13[-13])
 
-        # print(self.watermark, self.ram4k_d_out)
+        # print(self.name, self.ram4k_d_out)
         return self.screen_out
 
 
@@ -1490,12 +1490,12 @@ class Memory(Gate):
         Mux4Way16(a=ramOut,b=ramOut,c=screenOut,d=keyOut,sel[0]=address[13],sel[1]=address[14],out=out);
     }
     """
-    def __init__(self, watermark=None):
+    def __init__(self, name=None):
         super().__init__()
-        self.watermark = watermark
-        self.ram16k = RAM16K(watermark="memory_ram16k")
-        self.screen = Screen(watermark="memory_screen")
-        self.keyboard = Register(watermark="memory_keyboard")
+        self.name = name
+        self.ram16k = RAM16K(name="memory_ram16k")
+        self.screen = Screen(name="memory_screen")
+        self.keyboard = Register(name="memory_keyboard")
         self.ram16k_out = "0b0000000000000000"
         self.screen_out = "0b0000000000000000"
         self.keyboard_out = "0b0000000000000000"
@@ -1525,6 +1525,189 @@ class Memory(Gate):
         # Mux4Way16(a=ramOut,b=ramOut,c=screenOut,d=keyOut,sel[0]=address[13],sel[1]=address[14],out=out);
         return Mux4Way16().evaluate(a16=self.ram16k_out, b16=self.ram16k_out, c16=self.screen_out,
                                     d16=self.keyboard_out, sel2="0b"+self.addr15[-15:-13])
+
+
+class CPU(Gate):
+    """
+    CHIP CPU {
+        IN  inM[16],         // M value input  (M = contents of RAM[A])
+            instruction[16], // Instruction for execution
+            reset;           // Signals whether to re-start the current
+                             // program (reset==1) or continue executing
+                             // the current program (reset==0).
+
+        OUT outM[16],        // M value output
+            writeM,          // Write to M?
+            addressM[15],    // Address in data memory (of M)
+            pc[15];          // address of next instruction
+
+    PARTS:
+        Not(in=instruction[15],out=notOpcode);
+        Not(in=notOpcode,out=opcode);
+
+        // Determine whether instruction is A or C type
+        XNor(a=instruction[15],b=false,out=aType);
+
+        // Solve whether writeM is false (A inst) or variable (C inst)
+        XNor(a=aType,b=false,out=aTypeXNor);
+        And(a=aTypeXNor,b=instruction[3],out=writeM);
+        Mux16(a=ALUout,b=instruction,sel=notOpcode,out=mux1out);
+
+        // Solve whether aRegisterLoad is true (A inst) or variable (C inst)
+        Or(a=aType,b=instruction[5],out=aRegisterLoad);
+
+        // Solve whether dRegisterLoad is false (A inst) or variable (C inst)
+        And(a=aTypeXNor,b=instruction[4],out=dRegisterLoad);
+        ARegister(in=mux1out,load=aRegisterLoad,out=aRegisterOut,out[0..14]=addressM);
+        DRegister(in=ALUout,load=dRegisterLoad,out=dRegisterOut);
+        Mux16(a=aRegisterOut,b=inM,sel=instruction[12],out=mux2out);
+
+        // evaluate jump code
+        // block 1: evaluate jmp bits for 111 or other (removed)
+
+        // block 2: evaluate zr/ng bits
+        DMux4Way3(in=instruction[0..2],
+        sel[0]=ngOut,sel[1]=zrOut,
+        a[0]=aOut0,a[1]=aOut1,a[2]=aOut2,
+        b[0]=bOut0,b[1]=bOut1,b[2]=bOut2,
+        c[0]=cOut0,c[1]=cOut1,c[2]=cOut2,
+        d[0]=dOut0,d[1]=dOut1,d[2]=dOut2);
+
+        // block 2-1: evaluate zr=0/ng=0 (011,001,101,111 == LSB=1)
+        And(a=aOut0,b=true,out=out21);
+
+        // block 2-2: evaluate zr=0/ng=1 (100,101,110,111 == MSB=1)
+        And(a=true,b=bOut2,out=out22);
+
+        // block 2-3: evaluate zr=1/ng=0 (010,011,110,111 == MidB=1)
+        And(a=true,b=cOut1,out=out23);
+
+        // block 2-4: evaluate zr=1/ng=1 (should never happen)
+
+        // block 3: evaluating block 1/2 outputs
+        Or(a=out21,b=out22,out=out2122);
+        Or(a=out22,b=out23,out=out2223);
+        Or(a=out2122,b=out2223,out=jumpOut);
+
+        // Solve whether jumpOut is false (A inst) or variable (C inst)
+        And(a=aTypeXNor,b=jumpOut,out=jumpOutFinal);
+
+        // Back to CPU glue code
+        Not(in=jumpOutFinal,out=notJumpOutFinal);
+        PC(in=aRegisterOut,load=jumpOutFinal,inc=notJumpOutFinal,reset=reset,out[0..14]=pc);
+        ALU(x=dRegisterOut,y=mux2out,zx=instruction[11],nx=instruction[10],zy=instruction[9],ny=instruction[8],
+            f=instruction[7],no=instruction[6],out=outM,out=ALUout,zr=zrOut,ng=ngOut);
+    }
+    """
+    def __init__(self, name=None):
+        super().__init__()
+        self.name = name
+        self.a_register = Register(name="cpu_a_register")
+        self.d_register = Register(name="cpu_d_register")
+        self.ALU = ALU()
+        self.PC = PC()
+        self.a_out = "0b0000000000000000"
+        self.d_out = "0b0000000000000000"
+        self.alu_out = ("0b0000000000000000", "0b1", "0b0")  # result, self.zr, self.ng
+        self.pc_out = "0b0000000000000000"
+        self.write_out = "0b0"
+
+    #         IN  inM[16],         // M value input  (M = contents of RAM[A])
+    #             instruction[16], // Instruction for execution
+    #             reset;           // Signals whether to re-start the current
+    #                              // program (reset==1) or continue executing
+    #                              // the current program (reset==0)
+
+    def calculate(self):
+        # Not(in=instruction[15],out=notOpcode);
+        not_opcode = NotGate().evaluate(_in="0b"+self._in16[-16])
+
+        # Determine whether instruction is A or C type
+        #         XNor(a=instruction[15],b=false,out=aType);
+        a_type = XNorGate().evaluate(a="0b"+self._in16[-1], b="0b0")
+
+        # Solve whether writeM is false (A inst) or variable (C inst)
+        #         XNor(a=aType,b=false,out=aTypeXNor);
+        #         And(a=aTypeXNor,b=instruction[3],out=writeM);
+        #         Mux16(a=ALUout,b=instruction,sel=notOpcode,out=mux1out);
+        a_type_xnor = XNorGate().evaluate(a=a_type, b="0b0")
+        self.write_out = AndGate().evaluate(a=a_type_xnor, b="0b"+self._in16[-13])
+        mux1out = Mux16().evaluate(a16=self.alu_out[0], b16=self._in16, sel="0b"+self._in16[-16])
+
+        # Solve whether aRegisterLoad is true (A inst) or variable (C inst)
+        #         Or(a=aType,b=instruction[5],out=aRegisterLoad);
+        a_load = OrGate().evaluate(a=a_type, b="0b"+self._in16[-11])
+
+        # Solve whether dRegisterLoad is false (A inst) or variable (C inst)
+        #         And(a=aTypeXNor,b=instruction[4],out=dRegisterLoad);
+        #         ARegister(in=mux1out,load=aRegisterLoad,out=aRegisterOut,out[0..14]=addressM);
+        #         DRegister(in=ALUout,load=dRegisterLoad,out=dRegisterOut);
+        #         Mux16(a=aRegisterOut,b=inM,sel=instruction[12],out=mux2out);
+        d_load = AndGate().evaluate(a=a_type_xnor, b="0b"+self._in16[-12])
+        self.a_out = self.a_register.evaluate(_in16=mux1out, load=a_load)
+        self.d_out = self.d_register.evaluate(_in16=self.alu_out[0], load=d_load)
+        mux2out = Mux16().evaluate(a16=self.a_out, b16=self.b16, sel="0b"+self._in16[-4])
+
+        # evaluate jump code
+        # block 1: evaluate jmp bits for 111 or other (removed)
+        # block 2: evaluate zr/ng bits
+        #         DMux4Way3(in=instruction[0..2],
+        #         sel[0]=ngOut,sel[1]=zrOut,
+        #         a[0]=aOut0,a[1]=aOut1,a[2]=aOut2,
+        #         b[0]=bOut0,b[1]=bOut1,b[2]=bOut2,
+        #         c[0]=cOut0,c[1]=cOut1,c[2]=cOut2,
+        #         d[0]=dOut0,d[1]=dOut1,d[2]=dOut2);
+        aOut, bOut, cOut, dOut = Dmux4Way3().evaluate(
+            _in3="0b"+self._in16[-16:-13], sel2="0b"+self.alu_out[1][-1]+self.alu_out[2][-1])
+
+        # block 2-1: evaluate zr=0/ng=0 (011,001,101,111 == LSB=1)
+        #         And(a=aOut0,b=true,out=out21);
+        out21 = AndGate().evaluate(a="0b"+aOut[-1], b="0b1")
+
+        # block 2-2: evaluate zr=0/ng=1 (100,101,110,111 == MSB=1)
+        #         And(a=true,b=bOut2,out=out22);
+        out22 = AndGate().evaluate(a="0b1", b="0b"+bOut[-3])
+
+        # block 2-3: evaluate zr=1/ng=0 (010,011,110,111 == MidB=1)
+        #         And(a=true,b=cOut1,out=out23);
+        out23 = AndGate().evaluate(a="0b1", b="0b"+cOut[-2])
+
+        # block 2-4: evaluate zr=1/ng=1 (should never happen)
+        # block 3: evaluating block 1/2 outputs
+        #         Or(a=out21,b=out22,out=out2122);
+        #         Or(a=out22,b=out23,out=out2223);
+        #         Or(a=out2122,b=out2223,out=jumpOut);
+        out2122 = OrGate().evaluate(a=out21, b=out22)
+        out2223 = OrGate().evaluate(a=out22, b=out23)
+        jump_out = OrGate().evaluate(a=out2122, b=out2223)
+
+        # Solve whether jumpOut is false (A inst) or variable (C inst)
+        #         And(a=aTypeXNor,b=jumpOut,out=jumpOutFinal);
+        jump_out_final = AndGate().evaluate(a=a_type_xnor, b=jump_out)
+
+        # Back to CPU glue code
+        #         Not(in=jumpOutFinal,out=notJumpOutFinal);
+        #         PC(in=aRegisterOut,load=jumpOutFinal,inc=notJumpOutFinal,reset=reset,out[0..14]=pc);
+        #         ALU(x=dRegisterOut,y=mux2out,zx=instruction[11],nx=instruction[10],zy=instruction[9],
+        #           ny=instruction[8], f=instruction[7],no=instruction[6],out=outM,out=ALUout,zr=zrOut,ng=ngOut);
+
+        # h = LSB ---------------------------------------------- MSB
+        # h =  0  1  2  3  4  5  6  7  8   9  10  11  12  13  14  15
+        # p = 15 14 13 12 11 10  9  8  7   6   5   4   3   2   1   0
+        # p = -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -12 -13 -14 -15 -16
+
+        not_jump_out_final = NotGate().evaluate(_in=jump_out_final)
+        self.pc_out = self.PC.evaluate(_in16=self.a_out, load=jump_out_final, inc=not_jump_out_final, reset=self.reset)
+        self.alu_out = self.ALU.evaluate(x=self.d_out, y=mux2out, zx="0b"+self._in16[-12], nx="0b"+self._in16[-11],
+                                         zy="0b"+self._in16[-10], ny="0b"+self._in16[-9], f="0b"+self._in16[-8],
+                                         no="0b"+self._in16[-7])
+
+        #         OUT outM[16],        // M value output
+        #             writeM,          // Write to M?
+        #             addressM[15],    // Address in data memory (of M)
+        #             pc[15];          // address of next instruction
+
+        return self.d_out, self.write_out, self.a_out, self.pc_out
 
 
 class Computer(Gate):
@@ -1629,14 +1812,15 @@ def main(test_all=False):
         _alu = ALU()
         _dff = DFF()
         _bit = Bit()
-        _register = Register(watermark="register_assert")
+        _register = Register(name="register_assert")
         _pc = PC()
-        _ram8 = RAM8(watermark="ram8_assert")
-        _ram64 = RAM64(watermark="ram64_assert")
-        _ram512 = RAM512(watermark="ram512_assert")
-        _ram4k = RAM4K(watermark="ram4k_assert")
-        _ram16k = RAM16K(watermark="ram16k_assert")
-        screen = Screen(watermark="screen")
+        _ram8 = RAM8(name="ram8_assert")
+        _ram64 = RAM64(name="ram64_assert")
+        _ram512 = RAM512(name="ram512_assert")
+        _ram4k = RAM4K(name="ram4k_assert")
+        _ram16k = RAM16K(name="ram16k_assert")
+        screen = Screen(name="screen")
+        cpu = CPU(name="cpu")
 
         input_unit_test()
 
@@ -2138,16 +2322,30 @@ def main(test_all=False):
         assert screen.evaluate(_in16="0b1110000000000000", load="0b0", addr13="0b1111111111110") == "0b1110000000000000"
         assert screen.evaluate(_in16="0b1111000000000000", load="0b0", addr13="0b1111111111111") == "0b1111000000000000"
 
-    memory = Memory()
-    # 16K+8K+1 memory block for RAM, Screen, Keyboard address ranges respectively
-    assert memory.evaluate(_in16="0b1111000000000000", load="0b1", addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
-    assert memory.evaluate(_in16="0b0000111100000000", load="0b1", addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
-    assert memory.evaluate(_in16="0b1111000011110000", load="0b1", addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
-    assert memory.evaluate(_in16="0b1111000000001111", load="0b1", addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
-    assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
-    assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
-    assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
-    assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
+        memory = Memory()
+        # 16K+8K+1 memory block for RAM, Screen, Keyboard address ranges respectively
+        assert memory.evaluate(_in16="0b1111000000000000", load="0b1", addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
+        assert memory.evaluate(_in16="0b0000111100000000", load="0b1", addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
+        assert memory.evaluate(_in16="0b1111000011110000", load="0b1", addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
+        assert memory.evaluate(_in16="0b1111000000001111", load="0b1", addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
+        assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
+        assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
+        assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
+        assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
+
+    cpu = CPU()
+    #         IN  inM[16],         // M value input  (M = contents of RAM[A])
+    #             instruction[16], // Instruction for execution
+    #             reset;           // Signals whether to re-start the current
+
+    #         OUT outM[16],        // M value output
+    #             writeM,          // Write to M?
+    #             addressM[15],    // Address in data memory (of M)
+    #             pc[15];          // address of next instruction
+
+    # return self.d_out, self.write_out, self.a_out, self.pc_out
+    # instruction, value, reset = d_out, writeM, a_out, pc
+    assert cpu.evaluate(_in16="0b0000000000000000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b0", "0b0000000000000000", "0b0000000000000001")
 
 
 if __name__ == "__main__":
