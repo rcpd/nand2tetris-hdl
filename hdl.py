@@ -1735,6 +1735,7 @@ class Computer(Gate):
 
     def flash_rom(self, program):
         self.ROM32K.rom_load = "0b1"
+
         for i, command in enumerate(program):
             if self.debug:
                 print(format(i, '#017b'), "0b" + command.strip(),
@@ -1742,6 +1743,7 @@ class Computer(Gate):
                                            addr15=format(i, '#017b')))  # bin(i) & pad to 16 bit
             else:
                 self.ROM32K.evaluate(_in16="0b" + command.strip(), load="0b1", addr15=format(i, '#017b'))
+
         self.ROM32K.rom_load = "0b0"
         if self.debug:
             print()
@@ -2866,8 +2868,8 @@ def main(test_all=False, debug=False):
                 r"nand2tetris\projects\06\add\add.hack",
                 r"nand2tetris\projects\06\max\max.hack",
                 r"nand2tetris\projects\06\max\maxL.hack",
-                # r"nand2tetris\projects\06\pong\pong.hack",
-                # r"nand2tetris\projects\06\pong\pongL.hack",
+                # r"nand2tetris\projects\06\pong\pong.hack",  # verified but slow
+                # r"nand2tetris\projects\06\pong\pongL.hack",  # verified but slow
                 r"nand2tetris\projects\06\rect\rect.hack",
                 r"nand2tetris\projects\06\rect\rectL.hack",
 
@@ -2890,25 +2892,25 @@ def main(test_all=False, debug=False):
                 program = _asm_file.readlines()
 
             computer = Computer(name="computer_main", debug=debug)
-            print("%s: Loading bootloader" % _asm_filepath)
+            print("%s: Loading ROM" % _asm_filepath)
             computer.flash_rom(program)
             print("%s: Running program" % _asm_filepath)
-
             for command in program:
                 computer.evaluate()
 
+            if debug:
+                print()
+
 
 if __name__ == "__main__":
-    _test_main = True
-    _test_all = False
-    _debug = False
+    print("UNIT_TESTS: Initializing")
+    main(test_all=True, debug=False)
+    print("UNIT_TESTS: Complete!\n")
 
-    if _test_main:
-        print("TEST_MAIN: Initializing")
-        main(test_all=False, debug=_debug)
-        print("TEST_MAIN: Complete!")
+    print("COMPUTER_DEBUG: Initializing")
+    main(test_all=False, debug=True)
+    print("COMPUTER_DEBUG: Complete!\n")
 
-    if _test_all:
-        print("TEST_ALL: Initializing")
-        main(test_all=True, debug=_debug)
-        print("TEST_ALL: Complete!")
+    print("COMPUTER_ALL: Initializing")
+    main(test_all=False, debug=False)
+    print("COMPUTER_ALL: Complete!\n")
