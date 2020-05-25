@@ -1524,7 +1524,6 @@ class ROM32K(Gate):
         super().__init__()
         self.name = name
         self.rom_load = "0b0"
-        self.rom_data = "0b0000000000000000"
         self.rom16k_0 = RAM16K(name="rom_ram16k_0")
         self.rom16k_1 = RAM16K(name="rom_ram16k_1")
         self.rom16k_0_out = "0b0000000000000000"
@@ -1535,10 +1534,10 @@ class ROM32K(Gate):
         # process memory maps: selective load, always read
         # only evaluate selected block (python performance optimisation)
         if "0b" + self.addr15[-15] == "0b0":
-            self.rom16k_0_out = self.rom16k_0.evaluate(_in16=self.rom_data, load=self.rom_load,
+            self.rom16k_0_out = self.rom16k_0.evaluate(_in16=self._in16, load=self.rom_load,
                                                        addr14="0b" + self.addr15[-14:])
         elif "0b" + self.addr15[-15] == "0b1":
-            self.rom16k_1_out = self.rom16k_1.evaluate(_in16=self.rom_data, load=self.rom_load,
+            self.rom16k_1_out = self.rom16k_1.evaluate(_in16=self._in16, load=self.rom_load,
                                                        addr14="0b" + self.addr15[-14:])
         else:
             raise RuntimeError("Bad case in ROM32K: %s" % "0b" + self.addr15[-15])
@@ -1719,8 +1718,43 @@ class Computer(Gate):
         Memory(in=ramData,load=writeMem,address=addressRAM,out=ramOut);
     }
     """
+    def __init__(self, name=None, debug=False):
+        super().__init__()
+        self.name = name
+        self.debug = debug
+        self.CPU = CPU()
+        self.ROM32K = ROM32K()
+        self.Memory = Memory()
+        self.write_m = "0b0"
+        self._reset = "0b0"
+        self.pc_out = "0b0000000000000000"
+        self.rom_out = "0b0000000000000000"
+        self.a_out = "0b0000000000000000"
+        self.d_out = "0b0000000000000000"
+        self.m_out = "0b0000000000000000"
+
+    def flash_rom(self, program):
+        self.ROM32K.rom_load = "0b1"
+        for i, command in enumerate(program):
+            if self.debug:
+                print(format(i, '#017b'), command,
+                      self.ROM32K.evaluate(_in16=command, addr15=format(i, '#017b')))  # bin(i) & pad to 16 bit
+            else:
+                self.ROM32K.evaluate(_in16=command, load="0b1", addr15=format(i, '#017b'))
+        self.ROM32K.rom_load = "0b0"
+        if self.debug:
+            print()
+
     def calculate(self):
-        raise NotImplementedError
+        self.rom_out = self.ROM32K.evaluate(addr15=self.pc_out)
+        self.m_out, self.write_m, self.a_out, self.pc_out, self.d_out = \
+            self.CPU.evaluate(_in16=self.rom_out, b16=self.m_out, reset=self._reset)
+        self.m_out = self.Memory.evaluate(_in16=self.m_out, load=self.write_m, addr15=self.a_out)
+
+        if self.debug:
+            print(self.rom_out, self.a_out, self.m_out, self.write_m, self.pc_out, self.d_out)
+
+        return self.rom_out, self.a_out, self.m_out, self.write_m, self.pc_out, self.d_out
 
 
 def input_unit_test():
@@ -1777,7 +1811,7 @@ def input_unit_test():
     assert test == []
 
 
-def main(test_all=False):
+def main(test_all=False, debug=False):
     """
     Sanity check our truth tables for each gate as implemented
     """
@@ -2802,26 +2836,52 @@ def main(test_all=False):
             ("0b1111111111111111", "0b0", "0b0000000000001111", "0b0000000000001111", "0b0000000000000000")  # -1;JLE
 
         # ROM32K
-        assert _rom32k.evaluate(addr15="0b000000000000000") == "0b0000000000000000"
-        assert _rom32k.evaluate(addr15="0b100000000000000") == "0b0000000000000000"
+        assert _rom32k.evaluate(_in16="0b000000000000000", addr15="0b000000000000000") == "0b0000000000000000"
+        assert _rom32k.evaluate(_in16="0b000000000000000", addr15="0b100000000000000") == "0b0000000000000000"
         _rom32k.rom_load = "0b1"  # enable ROM bootloader
-        _rom32k.rom_data = "0b1111111111111111"
-        assert _rom32k.evaluate(addr15="0b000000000000000") == "0b1111111111111111"
-        assert _rom32k.evaluate(addr15="0b100000000000000") == "0b1111111111111111"
+        assert _rom32k.evaluate(_in16="0b1111111111111111", addr15="0b000000000000000") == "0b1111111111111111"
+        assert _rom32k.evaluate(_in16="0b1111111111111111", addr15="0b100000000000000") == "0b1111111111111111"
         _rom32k.rom_load = "0b0"  # disable ROM bootloader
-        _rom32k.rom_data = "0b0000000000000000"
-        assert _rom32k.evaluate(addr15="0b000000000000000") == "0b1111111111111111"
-        assert _rom32k.evaluate(addr15="0b100000000000000") == "0b1111111111111111"
+        assert _rom32k.evaluate(_in16="0b000000000000000", addr15="0b000000000000000") == "0b1111111111111111"
+        assert _rom32k.evaluate(_in16="0b000000000000000", addr15="0b100000000000000") == "0b1111111111111111"
 
-    # new tests go here
-    pass
+    else:
+        # Computer
+        program = [
+            "0b0000000000001111",  # @0000000000001111
+            "0b1110111010010000",  # D=-1
+            "0b1110111111001000",  # M=1
+            "0b1110001101100000",  # A=!D
+            "0b1110101010000111",  # 0;JMP
+        ]
+
+        computer = Computer(name="computer_main", debug=debug)
+        print("Loading bootloader...")
+        computer.flash_rom(program)
+        print("Running program...")
+
+        for i, command in enumerate(program):
+            # self.rom_out, self.a_out, self.m_out, self.write_m, self.pc_out, self.d_out
+            if debug:
+                print(command, "0b0000000000001111", "0b0000000000000000", "0b0", format(i+1, '#018b'), "0b0000000000000000")
+                # b16="0b000000000000000", addr15="0b00000000000000", reset="0b0"
+                computer.evaluate(_in16="0b000000000000000")  # TODO: assert
+                print()
+                break
+            else:
+                computer.evaluate()
 
 
 if __name__ == "__main__":
-    # print("TEST_MAIN: Loading")
-    # main(test_all=False)
-    # print("TEST_MAIN: Passed!")
+    test_main = False
+    test_all = False
 
-    print("TEST_ALL: Loading")
-    main(test_all=True)
-    print("TEST_ALL: Passed!")
+    if test_main:
+        print("TEST_MAIN: Initializing")
+        main(test_all=False, debug=True)
+        print("TEST_MAIN: Complete!")
+
+    if test_all:
+        print("TEST_ALL: Initializing")
+        main(test_all=True)
+        print("TEST_ALL: Complete!")
