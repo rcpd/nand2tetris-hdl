@@ -1746,10 +1746,10 @@ class Computer(Gate):
             print()
 
     def calculate(self):
-        self.rom_out = self.ROM32K.evaluate(addr15=self.pc_out)
+        self.rom_out = self.ROM32K.evaluate(_in16=self.m_out, addr15="0b" + self.pc_out[-15:])
         self.m_out, self.write_m, self.a_out, self.pc_out, self.d_out = \
             self.CPU.evaluate(_in16=self.rom_out, b16=self.m_out, reset=self._reset)
-        self.m_out = self.Memory.evaluate(_in16=self.m_out, load=self.write_m, addr15=self.a_out)
+        self.m_out = self.Memory.evaluate(_in16=self.m_out, load=self.write_m, addr15="0b" + self.a_out[-15:])
 
         if self.debug:
             print(self.rom_out, self.a_out, self.m_out, self.write_m, self.pc_out, self.d_out)
@@ -2836,14 +2836,14 @@ def main(test_all=False, debug=False):
             ("0b1111111111111111", "0b0", "0b0000000000001111", "0b0000000000001111", "0b0000000000000000")  # -1;JLE
 
         # ROM32K
-        assert _rom32k.evaluate(_in16="0b000000000000000", addr15="0b000000000000000") == "0b0000000000000000"
-        assert _rom32k.evaluate(_in16="0b000000000000000", addr15="0b100000000000000") == "0b0000000000000000"
+        assert _rom32k.evaluate(_in16="0b0000000000000000", addr15="0b000000000000000") == "0b0000000000000000"
+        assert _rom32k.evaluate(_in16="0b0000000000000000", addr15="0b100000000000000") == "0b0000000000000000"
         _rom32k.rom_load = "0b1"  # enable ROM bootloader
         assert _rom32k.evaluate(_in16="0b1111111111111111", addr15="0b000000000000000") == "0b1111111111111111"
         assert _rom32k.evaluate(_in16="0b1111111111111111", addr15="0b100000000000000") == "0b1111111111111111"
         _rom32k.rom_load = "0b0"  # disable ROM bootloader
-        assert _rom32k.evaluate(_in16="0b000000000000000", addr15="0b000000000000000") == "0b1111111111111111"
-        assert _rom32k.evaluate(_in16="0b000000000000000", addr15="0b100000000000000") == "0b1111111111111111"
+        assert _rom32k.evaluate(_in16="0b0000000000000000", addr15="0b000000000000000") == "0b1111111111111111"
+        assert _rom32k.evaluate(_in16="0b0000000000000000", addr15="0b100000000000000") == "0b1111111111111111"
 
     else:
         # Computer
@@ -2860,28 +2860,20 @@ def main(test_all=False, debug=False):
         computer.flash_rom(program)
         print("Running program...")
 
-        for i, command in enumerate(program):
-            # self.rom_out, self.a_out, self.m_out, self.write_m, self.pc_out, self.d_out
-            if debug:
-                print(command, "0b0000000000001111", "0b0000000000000000", "0b0", format(i+1, '#018b'), "0b0000000000000000")
-                # b16="0b000000000000000", addr15="0b00000000000000", reset="0b0"
-                computer.evaluate(_in16="0b000000000000000")  # TODO: assert
-                print()
-                break
-            else:
-                computer.evaluate()
+        for command in program:
+            computer.evaluate()
 
 
 if __name__ == "__main__":
-    test_main = False
-    test_all = False
+    _test_main = True
+    _test_all = False
 
-    if test_main:
+    if _test_main:
         print("TEST_MAIN: Initializing")
         main(test_all=False, debug=True)
         print("TEST_MAIN: Complete!")
 
-    if test_all:
+    if _test_all:
         print("TEST_ALL: Initializing")
         main(test_all=True)
         print("TEST_ALL: Complete!")
