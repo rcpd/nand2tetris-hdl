@@ -1737,10 +1737,11 @@ class Computer(Gate):
         self.ROM32K.rom_load = "0b1"
         for i, command in enumerate(program):
             if self.debug:
-                print(format(i, '#017b'), command,
-                      self.ROM32K.evaluate(_in16=command, addr15=format(i, '#017b')))  # bin(i) & pad to 16 bit
+                print(format(i, '#017b'), "0b" + command.strip(),
+                      self.ROM32K.evaluate(_in16="0b" + command.strip(),
+                                           addr15=format(i, '#017b')))  # bin(i) & pad to 16 bit
             else:
-                self.ROM32K.evaluate(_in16=command, load="0b1", addr15=format(i, '#017b'))
+                self.ROM32K.evaluate(_in16="0b" + command.strip(), load="0b1", addr15=format(i, '#017b'))
         self.ROM32K.rom_load = "0b0"
         if self.debug:
             print()
@@ -2847,33 +2848,67 @@ def main(test_all=False, debug=False):
 
     else:
         # Computer
-        program = [
+        if debug:
+            '''
             "0b0000000000001111",  # @0000000000001111
             "0b1110111010010000",  # D=-1
             "0b1110111111001000",  # M=1
             "0b1110001101100000",  # A=!D
             "0b1110101010000111",  # 0;JMP
-        ]
+            '''
+            _asm_filepaths = [r'python_hdl\debug.hack']
 
-        computer = Computer(name="computer_main", debug=debug)
-        print("Loading bootloader...")
-        computer.flash_rom(program)
-        print("Running program...")
+        else:
+            _asm_filepaths = [
+                r"nand2tetris\projects\04\fill\fill.hack",
+                r"nand2tetris\projects\04\mult\mult.hack",
 
-        for command in program:
-            computer.evaluate()
+                r"nand2tetris\projects\06\add\add.hack",
+                r"nand2tetris\projects\06\max\max.hack",
+                r"nand2tetris\projects\06\max\maxL.hack",
+                # r"nand2tetris\projects\06\pong\pong.hack",
+                # r"nand2tetris\projects\06\pong\pongL.hack",
+                r"nand2tetris\projects\06\rect\rect.hack",
+                r"nand2tetris\projects\06\rect\rectL.hack",
+
+                r"nand2tetris\projects\07\MemoryAccess\BasicTest\BasicTest.hack",
+                r"nand2tetris\projects\07\MemoryAccess\PointerTest\PointerTest.hack",
+                r"nand2tetris\projects\07\MemoryAccess\StaticTest\StaticTest.hack",
+                r"nand2tetris\projects\07\StackArithmetic\SimpleAdd\SimpleAdd.hack",
+                r"nand2tetris\projects\07\StackArithmetic\StackTest\StackTest.hack",
+
+                r"nand2tetris\projects\08\FunctionCalls\FibonacciElement\FibonacciElement.hack",
+                r"nand2tetris\projects\08\FunctionCalls\NestedCall\NestedCall.hack",
+                r"nand2tetris\projects\08\FunctionCalls\SimpleFunction\SimpleFunction.hack",
+                r"nand2tetris\projects\08\FunctionCalls\StaticsTest\StaticsTest.hack",
+                r"nand2tetris\projects\08\ProgramFlow\BasicLoop\BasicLoop.hack",
+                r"nand2tetris\projects\08\ProgramFlow\FibonacciSeries\FibonacciSeries.hack",
+            ]
+
+        for _asm_filepath in _asm_filepaths:
+            with open(_asm_filepath) as _asm_file:
+                program = _asm_file.readlines()
+
+            computer = Computer(name="computer_main", debug=debug)
+            print("%s: Loading bootloader" % _asm_filepath)
+            computer.flash_rom(program)
+            print("%s: Running program" % _asm_filepath)
+
+            for command in program:
+                computer.evaluate()
 
 
 if __name__ == "__main__":
     _test_main = True
     _test_all = False
+    _debug = False
 
     if _test_main:
         print("TEST_MAIN: Initializing")
-        main(test_all=False, debug=True)
+        main(test_all=False, debug=_debug)
         print("TEST_MAIN: Complete!")
 
     if _test_all:
         print("TEST_ALL: Initializing")
-        main(test_all=True)
+        main(test_all=True, debug=_debug)
         print("TEST_ALL: Complete!")
