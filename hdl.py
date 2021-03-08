@@ -164,7 +164,7 @@ class Gate(object):
             if type(addr13) is not str:
                 addr13 = bin(addr13)
             if int(addr13, 2) < 0 or int(addr13, 2) > 8191:
-                raise RuntimeError("addr13 input must be 12 bits")
+                raise RuntimeError("addr13 input must be 13 bits")
             self.addr13 = addr13
 
         if addr14 is not None:
@@ -178,7 +178,7 @@ class Gate(object):
             if type(addr15) is not str:
                 addr15 = bin(addr15)
             if int(addr15, 2) < 0 or int(addr15, 2) > 32767:
-                raise RuntimeError("addr15 input must be 14 bits")
+                raise RuntimeError("addr15 input must be 15 bits")
             self.addr15 = addr15
 
         if _in8 is not None:
@@ -2887,7 +2887,7 @@ def main(test_all=False, debug=False):
                 # r"..\nand2tetris\projects\08\ProgramFlow\BasicLoop\BasicLoop.hack",
                 # r"..\nand2tetris\projects\08\ProgramFlow\FibonacciSeries\FibonacciSeries.hack",
 
-                r"..\nand2tetris\projects\09\Average\Average.hack",
+                # r"..\nand2tetris\projects\09\Average\Average.hack",  # too large
                 r"..\nand2tetris\projects\09\Fraction\Fraction.hack",
                 r"..\nand2tetris\projects\09\HelloWorld\HelloWorld.hack",
                 r"..\nand2tetris\projects\09\List\List.hack",
