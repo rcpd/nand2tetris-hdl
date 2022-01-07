@@ -10,6 +10,7 @@ p = -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -12 -13 -14 -15 -16
 
 """
 
+import traceback
 from datetime import datetime
 
 # TODO: reduce multiple instantiations of classes where not required
@@ -1815,11 +1816,11 @@ def input_unit_test():
     assert test == []
 
 
-def main(test_all=False, debug=False):
+def main(unit_test=False, debug=False):
     """
     Sanity check our truth tables for each gate as implemented
     """
-    if test_all:
+    if unit_test:
         _nand = NandGate()
         _not = NotGate()
         _not16 = Not16Gate()
@@ -2863,7 +2864,7 @@ def main(test_all=False, debug=False):
 
         else:
             # TODO: projects 1-11 accounted for, ASM included in assembler/interpreter
-            _asm_filepaths = [
+            _bin_filepaths = [
                 r"nand2tetris\projects\04\fill\fill.hack",
                 r"nand2tetris\projects\04\mult\mult.hack",
                 r"nand2tetris\projects\06\add\add.hack",
@@ -2886,47 +2887,52 @@ def main(test_all=False, debug=False):
                 r"nand2tetris\projects\08\ProgramFlow\FibonacciSeries\FibonacciSeries.hack",
 
                 # TODO: untested, still need project 12
-                # r'nand2tetris\projects\09\Average\Average.hack',
-                # r'nand2tetris\projects\09\Fraction\Fraction.hack',
-                # r'nand2tetris\projects\09\HelloWorld\HelloWorld.hack',
-                # r'nand2tetris\projects\09\List\List.hack',
-                # # r'nand2tetris\projects\09\Square\Square.hack',  # too large, generates 17 bit addresses
-                # r'nand2tetris\projects\10\ArrayTest\ArrayTest.hack',
-                # # r'nand2tetris\projects\10\Square\Square.hack',  # too large, generates 17 bit addresses
-                # r'nand2tetris\projects\11\Average\Average.hack',
-                # # r'nand2tetris\projects\11\ComplexArrays\ComplexArrays.hack',  # too large, generates 17 bit addr
-                # r'nand2tetris\projects\11\ConvertToBin\ConvertToBin.hack',
-                # # r'nand2tetris\projects\11\Pong\Pong.hack',  # too large, generates 17 bit addresses
-                # r'nand2tetris\projects\11\Seven\Seven.hack',
-                # # r'nand2tetris\projects\11\Square\Square.hack',  # too large, generates 17 bit addresses
+                r'nand2tetris\projects\09\Average\Average.hack',  # FIXME: addr15 input must be 15 bits
+                r'nand2tetris\projects\09\Fraction\Fraction.hack',
+                r'nand2tetris\projects\09\HelloWorld\HelloWorld.hack',
+                r'nand2tetris\projects\09\List\List.hack',
+                # r'nand2tetris\projects\09\Square\Square.hack',  # too large, generates 17 bit addresses
+                r'nand2tetris\projects\10\ArrayTest\ArrayTest.hack',
+                # r'nand2tetris\projects\10\Square\Square.hack',  # too large, generates 17 bit addresses
+                r'nand2tetris\projects\11\Average\Average.hack',
+                # r'nand2tetris\projects\11\ComplexArrays\ComplexArrays.hack',  # too large, generates 17 bit addr
+                r'nand2tetris\projects\11\ConvertToBin\ConvertToBin.hack',
+                # r'nand2tetris\projects\11\Pong\Pong.hack',  # too large, generates 17 bit addresses
+                r'nand2tetris\projects\11\Seven\Seven.hack',
+                # r'nand2tetris\projects\11\Square\Square.hack',  # too large, generates 17 bit addresses
             ]
 
         for _bin_filepath in _bin_filepaths:
-            now = datetime.now()
-            current_time = now.strftime("%H:%M:%S")
             with open(_bin_filepath) as _asm_file:
                 program = _asm_file.readlines()
 
             computer = Computer(name="computer_main", debug=debug)
-            print("%s %s: Loading ROM" % (current_time, _bin_filepath))
+            print("%s %s: Loading ROM" % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
             computer.flash_rom(program)
-            print("%s %s: Running program" % (current_time, _bin_filepath))
-            for command in program:
-                computer.evaluate()
+            print("%s %s: Running program" % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
 
-            if debug:
-                print()
+            for command in program:
+                try:
+                    computer.evaluate()
+                except RuntimeError:
+                    traceback.print_exc()
+                    print("%s %s: Terminating program due to error"
+                          % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
+                    break
 
 
 if __name__ == "__main__":
-    print("UNIT_TESTS: Initializing")
-    main(test_all=True, debug=False)
-    print("UNIT_TESTS: Complete!\n")
+    # run chip unit tests (~10 seconds)
+    print("%s UNIT_TESTS: Initializing" % datetime.now().strftime("%H:%M:%S"))
+    main(unit_test=True, debug=False)
+    print("%s UNIT_TESTS: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
 
-    print("COMPUTER_DEBUG: Initializing")
-    main(test_all=False, debug=True)
-    print("COMPUTER_DEBUG: Complete!\n")
+    # run basic debug HACK program (~5 seconds)
+    print("%s COMPUTER_DEBUG: Initializing" % datetime.now().strftime("%H:%M:%S"))
+    main(unit_test=False, debug=True)
+    print("%s COMPUTER_DEBUG: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
 
-    print("COMPUTER_ALL: Initializing")
-    main(test_all=False, debug=False)
-    print("COMPUTER_ALL: Complete!\n")
+    # run all listed HACK programs (varies, ~5 mins for project 4-8)
+    print("%s COMPUTER_ALL: Initializing" % datetime.now().strftime("%H:%M:%S"))
+    main(unit_test=False, debug=False)
+    print("%s COMPUTER_ALL: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
