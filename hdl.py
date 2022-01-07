@@ -2950,7 +2950,7 @@ if __name__ == "__main__":
     main(unit_test=False, debug=True)
     print("%s HACK_DEBUG: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
 
-    # run all listed HACK programs (varies, ~5 mins for project 4-8 sans pong)
+    # run all listed HACK programs (varies, ~5 mins for project 4-8, ~35 mins for pong)
     print("%s HACK: Initializing" % datetime.now().strftime("%H:%M:%S"))
     main(unit_test=False, debug=False)
     print("%s HACK: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
