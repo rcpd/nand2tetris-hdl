@@ -2898,9 +2898,9 @@ def main(unit_test=False, debug=False):
                 # r'..\projects\10\ArrayTest\ArrayTest.hack',
                 # r'..\projects\10\Square\Square.hack',  # generates 17 bit addresses (different Main.jack to 9/11)
                 # r'..\projects\11\Average\Average.hack',
-                # r'..\projects\11\ComplexArrays\ComplexArrays.hack',  # too large, generates 17 bit addresses
+                # r'..\projects\11\ComplexArrays\ComplexArrays.hack',  # 17 bit addresses
                 # r'..\projects\11\ConvertToBin\ConvertToBin.hack',
-                # r'..\projects\11\Pong\Pong.hack',  # too large, generates 17 bit addresses
+                # r'..\projects\11\Pong\Pong.hack',  # 17 bit addresses
                 # r'..\projects\11\Seven\Seven.hack',
                 # r'..\projects\11\Square\Square.hack',
             ]
