@@ -39,10 +39,12 @@ class Gate(object):
         self.inc = None
         self.reset = None
         self.addr3 = None
+        self.addr6 = None
 
     def evaluate(self, a=None, b=None, c=None, _in=None, sel=None, sel2=None, sel3=None, _in8=None, _in16=None,
                  a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None, x=None, y=None,
-                 zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None, addr3=None):
+                 zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None, addr3=None,
+                 addr6=None):
         """
         validate input, None = uninitialized
         """
@@ -115,7 +117,14 @@ class Gate(object):
             if int(addr3, 2) < 0 or int(addr3, 2) > 7:
                 raise RuntimeError("addr3 input must be 3 bits")
             self.addr3 = addr3
-        
+
+        if addr6 is not None:
+            if type(addr6) is not str:
+                addr6 = bin(addr6)
+            if int(addr6, 2) < 0 or int(addr6, 2) > 77:
+                raise RuntimeError("addr6 input must be 6 bits")
+            self.addr6 = addr6
+
         if _in8 is not None:
             if type(_in8) is not str:
                 _in8 = bin(_in8)
@@ -963,6 +972,55 @@ class RAM8(Gate):
         return Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7, sel3=self.addr3)
 
 
+class RAM64(Gate):
+    """
+    Memory of 64 registers, each 16 bit-wide.
+    Out holds the value stored at the memory location specified by address.
+    If load==1, then the in value is loaded into the memory location specified by address
+
+    CHIP RAM64 {
+        IN in[16], load, address[6];
+        OUT out[16];
+
+    PARTS:
+        DMux8Way(in=load, sel=address[0..2], a=r0, b=r1, c=r2, d=r3, e=r4, f=r5, g=r6, h=r7);
+        RAM8(in=in, load=r0, address=address[3..5], out=r0Out);
+        RAM8(in=in, load=r1, address=address[3..5], out=r1Out);
+        RAM8(in=in, load=r2, address=address[3..5], out=r2Out);
+        RAM8(in=in, load=r3, address=address[3..5], out=r3Out);
+        RAM8(in=in, load=r4, address=address[3..5], out=r4Out);
+        RAM8(in=in, load=r5, address=address[3..5], out=r5Out);
+        RAM8(in=in, load=r6, address=address[3..5], out=r6Out);
+        RAM8(in=in, load=r7, address=address[3..5], out=r7Out);
+        Mux8Way16(a=r0Out, b=r1Out, c=r2Out, d=r3Out, e=r4Out, f=r5Out, g=r6Out, h=r7Out, sel=address[0..2], out=out);
+    }
+    """
+    def __init__(self):
+        super().__init__()
+        self.r0 = RAM8()
+        self.r1 = RAM8()
+        self.r2 = RAM8()
+        self.r3 = RAM8()
+        self.r4 = RAM8()
+        self.r5 = RAM8()
+        self.r6 = RAM8()
+        self.r7 = RAM8()
+
+    def calculate(self):
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr6[-3:])
+        r0 = self.r0.evaluate(_in16=self._in16, load=dmux8w[0], addr3=self.addr6[:-3])
+        r1 = self.r1.evaluate(_in16=self._in16, load=dmux8w[1], addr3=self.addr6[:-3])
+        r2 = self.r2.evaluate(_in16=self._in16, load=dmux8w[2], addr3=self.addr6[:-3])
+        r3 = self.r3.evaluate(_in16=self._in16, load=dmux8w[3], addr3=self.addr6[:-3])
+        r4 = self.r4.evaluate(_in16=self._in16, load=dmux8w[4], addr3=self.addr6[:-3])
+        r5 = self.r5.evaluate(_in16=self._in16, load=dmux8w[5], addr3=self.addr6[:-3])
+        r6 = self.r6.evaluate(_in16=self._in16, load=dmux8w[6], addr3=self.addr6[:-3])
+        r7 = self.r7.evaluate(_in16=self._in16, load=dmux8w[7], addr3=self.addr6[:-3])
+        print("class", r0, r1, r2, r3, r4, r5, r6, r7)
+        return Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7,
+                                    sel3="0b"+self.addr6[-3:])
+
+
 def input_unit_test():
     """
     Test input sizes: catch RuntimeException(s)
@@ -1044,11 +1102,12 @@ def main():
     _add16 = Add16()
     _inc16 = Inc16()
     _alu = ALU()
+    _dff = DFF()
     _bit = Bit()
     _register = Register()
     _pc = PC()
     _ram8 = RAM8()
-    _dff = DFF()
+    _ram64 = RAM64()
 
     input_unit_test()
 
@@ -1289,6 +1348,12 @@ def main():
     assert _ram8.evaluate(_in16="0b1000000000000000", load="0b1", addr3="0b111") == "0b1000000000000000"
     assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b000") == "0b0000000000000001"
     assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b111") == "0b1000000000000000"
+
+    # Memory of 64 registers, each 16 bit-wide
+    assert _ram64.evaluate(_in16="0b0000000000000001", load="0b1", addr6="0b000000") == "0b0000000000000001"
+    assert _ram64.evaluate(_in16="0b1000000000000000", load="0b1", addr6="0b000111") == "0b1000000000000000"
+    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b000000") == "0b0000000000000001"
+    assert _ram64.evaluate(_in16="0b0000000000000000", load="0b0", addr6="0b000111") == "0b1000000000000000"
 
 
 if __name__ == "__main__":
