@@ -44,12 +44,14 @@ class Gate(object):
         self.addr6 = None
         self.addr9 = None
         self.addr12 = None
+        self.addr13 = None
         self.addr14 = None
-        
+        self.addr15 = None
+
     def evaluate(self, a=None, b=None, c=None, _in=None, _in3=None, sel=None, sel2=None, sel3=None, _in8=None, 
                  _in16=None, a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None, x=None, 
                  y=None, zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None, 
-                 addr3=None, addr6=None, addr9=None, addr12=None, addr14=None):
+                 addr3=None, addr6=None, addr9=None, addr12=None, addr13=None, addr14=None, addr15=None):
         """
         validate input, None = uninitialized
         """
@@ -149,14 +151,28 @@ class Gate(object):
             if int(addr12, 2) < 0 or int(addr12, 2) > 4095:
                 raise RuntimeError("addr12 input must be 12 bits")
             self.addr12 = addr12   
-
+        
+        if addr13 is not None:
+            if type(addr13) is not str:
+                addr13 = bin(addr13)
+            if int(addr13, 2) < 0 or int(addr13, 2) > 8191:
+                raise RuntimeError("addr13 input must be 12 bits")
+            self.addr13 = addr13   
+        
         if addr14 is not None:
             if type(addr14) is not str:
                 addr14 = bin(addr14)
             if int(addr14, 2) < 0 or int(addr14, 2) > 16383:
                 raise RuntimeError("addr14 input must be 14 bits")
             self.addr14 = addr14  
-            
+        
+        if addr15 is not None:
+            if type(addr15) is not str:
+                addr15 = bin(addr15)
+            if int(addr15, 2) < 0 or int(addr15, 2) > 32767:
+                raise RuntimeError("addr15 input must be 14 bits")
+            self.addr15 = addr15  
+        
         if _in8 is not None:
             if type(_in8) is not str:
                 _in8 = bin(_in8)
@@ -1268,8 +1284,8 @@ class RAM4K(Gate):
         else:
             raise RuntimeError("Bad case in RAM4K: %s" % self.addr12[-12:-9])
 
-        # print("outputs:", self.ram512_0_out, self.ram512_1_out, self.ram512_2_out, self.ram512_3_out, self.ram512_4_out,
-        #       self.ram512_5_out, self.ram512_6_out, self.ram512_7_out)
+        # print("outputs:", self.ram512_0_out, self.ram512_1_out, self.ram512_2_out, self.ram512_3_out,
+        #       self.ram512_4_out, self.ram512_5_out, self.ram512_6_out, self.ram512_7_out)
 
         self.ram512_d_out = Mux8Way16().evaluate(
             a16=self.ram512_0_out, b16=self.ram512_1_out, c16=self.ram512_2_out, d16=self.ram512_3_out,
@@ -1398,7 +1414,7 @@ class Dmux4Way3(Gate):
         IN in[3], sel[2];
         OUT a[3], b[3], c[3], d[3];
 
-        PARTS:
+    PARTS:
         DMux3(in=in, sel=sel[1], a=dIn0, b=dIn1);
         DMux3(in=dIn0, sel=sel[0], a=a, b=b);
         DMux3(in=dIn1, sel=sel[0], a=c, b=d);
@@ -1409,6 +1425,100 @@ class Dmux4Way3(Gate):
         dmux3_1a, dmux3_1b = DMux3().evaluate(_in3=dmux3_0a, sel="0b"+self.sel2[-1])
         dmux3_2a, dmux3_2b = DMux3().evaluate(_in3=dmux3_0b, sel="0b"+self.sel2[-1])
         return dmux3_1a, dmux3_1b, dmux3_2a, dmux3_2b
+
+
+class Screen(Gate):
+    """
+    // No HDL, implemented in Java on the course
+    // Screen(in=in[16],load=load,address=[13],out=out[16]);
+    """
+    def __init__(self, watermark=None):
+        super().__init__()
+        self.watermark = watermark
+        self.ram4k_0 = RAM4K(watermark="screen_ram4k_0")
+        self.ram4k_1 = RAM4K(watermark="screen_ram4k_1")
+        self.ram4k_0_out = "0b0000000000000000"
+        self.ram4k_1_out = "0b0000000000000000"
+        self.screen_out = "0b0000000000000000"
+
+    def calculate(self):
+        # MSB = RAM4K selector
+        # only evaluate selected RAM4K block (python performance optimisation)
+
+        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr14)
+        
+        dmux = DMux().evaluate(_in=self.load, sel="0b"+self.addr13[-13])
+        
+        if "0b"+self.addr13[-13] == "0b0":
+            self.ram4k_0_out = self.ram4k_0.evaluate(_in16=self._in16, load=dmux[0], addr12=self.addr13[-12:])
+        elif "0b"+self.addr13[-13] == "0b1":
+            self.ram4k_1_out = self.ram4k_1.evaluate(_in16=self._in16, load=dmux[1], addr12=self.addr13[-12:])
+        else:
+            raise RuntimeError("Bad case in Screen: %s" % self.addr13[-13])
+
+        # print("outputs:", self.ram4k_0_out, self.ram4k_1_out, self.ram4k_2_out, self.ram4k_3_out)
+
+        self.screen_out = Mux16().evaluate(a16=self.ram4k_0_out, b16=self.ram4k_1_out, sel="0b"+self.addr13[-13])
+
+        # print(self.watermark, self.ram4k_d_out)
+        return self.screen_out
+
+
+class Memory(Gate):
+    """
+    16K+8K+1 memory block for RAM, Screen, Keyboard address ranges respectively
+    CHIP Memory {
+        IN in[16], load, address[15]; //0=LSB,14=MSB
+        OUT out[16];
+
+    PARTS:
+        // determine which chip is being addressed from 2xMSB in address
+        // A/B = RAM, C = SCREEN, D = KEYBOARD
+        DMux4Way(in=true,sel[0]=address[13],sel[1]=address[14],a=aOut,b=bOut,c=cOut);
+        Or(a=aOut,b=bOut,out=abOut);
+    
+        // determine what chip, if any, will load
+        And(a=abOut,b=load,out=ramLoad); 
+        And(a=cOut,b=load,out=screenLoad);
+        
+        // process memory maps: selective load, always read
+        RAM16K(in=in,load=ramLoad,address=address[0..13],out=ramOut);
+        Screen(in=in,load=screenLoad,address=address[0..12],out=screenOut); 
+        Keyboard(out=keyOut);
+        
+        // select which out gets expressed
+        Mux4Way16(a=ramOut,b=ramOut,c=screenOut,d=keyOut,sel[0]=address[13],sel[1]=address[14],out=out);
+    }
+    """
+    def calculate(self):
+        # determine which chip is being addressed from 2xMSB in address
+        dmux4w_a, dmux4w_b, dmux4w_c, dmux4w_d = DMux4Way().evaluate(
+            _in="0b1", sel2="0b"+self.addr15[-15]+self.sel3[-14])
+        or0 = OrGate().evaluate(a=dmux4w_a, b=dmux4w_b)
+
+        # determine what chip, if any, will load
+        and0 = AndGate().evaluate(a=or0, b=self.load)
+        and1 = AndGate().evaluate(a=dmux4w_c, b=self.load)
+
+        ram16k = RAM16K().evaluate(_in16=self._in16, load=self.load, addr14="0b"+self.addr15[-14:])
+        screen = Screen.evaluate()
+        keyboard = Register()
+
+
+class Computer(Gate):
+    """
+    CHIP Computer {
+
+    IN reset;
+
+    PARTS:
+        ROM32K(address=pcOut,out=romOut);
+        CPU(inM=ramOut,instruction=romOut,reset=reset,outM=ramData,writeM=writeMem,addressM=addressRAM,pc=pcOut);
+        Memory(in=ramData,load=writeMem,address=addressRAM,out=ramOut);
+    }
+    """
+    def calculate(self):
+        raise NotImplementedError  # included for documenation only
 
 
 def input_unit_test():
@@ -1504,6 +1614,7 @@ def main(test_all=False):
         _ram512 = RAM512(watermark="ram512_assert")
         _ram4k = RAM4K(watermark="ram4k_assert")
         _ram16k = RAM16K(watermark="ram16k_assert")
+        screen = Screen(watermark="screen")
 
         input_unit_test()
 
@@ -1964,6 +2075,46 @@ def main(test_all=False):
         assert _dmux4way3.evaluate(_in3="0b111", sel2="0b01") == ("0b000", "0b111", "0b000", "0b000")
         assert _dmux4way3.evaluate(_in3="0b111", sel2="0b10") == ("0b000", "0b000", "0b111", "0b000")
         assert _dmux4way3.evaluate(_in3="0b111", sel2="0b11") == ("0b000", "0b000", "0b000", "0b111")
+
+        # SCREEN: sequential set (000/XXX)
+        assert screen.evaluate(_in16="0b0000000000000000", load="0b1", addr13="0b0000000000000") == "0b0000000000000000"
+        assert screen.evaluate(_in16="0b0000000000000001", load="0b1", addr13="0b0000000000001") == "0b0000000000000001"
+        assert screen.evaluate(_in16="0b0000000000000010", load="0b1", addr13="0b0000000000010") == "0b0000000000000010"
+        assert screen.evaluate(_in16="0b0000000000000011", load="0b1", addr13="0b0000000000111") == "0b0000000000000011"
+        assert screen.evaluate(_in16="0b1000000000000000", load="0b1", addr13="0b0000000001100") == "0b1000000000000000"
+        assert screen.evaluate(_in16="0b1010000000000000", load="0b1", addr13="0b0000000011101") == "0b1010000000000000"
+        assert screen.evaluate(_in16="0b1110000000000000", load="0b1", addr13="0b0000001111110") == "0b1110000000000000"
+        assert screen.evaluate(_in16="0b1111000000000000", load="0b1", addr13="0b0000011111111") == "0b1111000000000000"
+
+        # SCREEN: sequential set (111/XXX)
+        assert screen.evaluate(_in16="0b0000000000000000", load="0b1", addr13="0b1111111111000") == "0b0000000000000000"
+        assert screen.evaluate(_in16="0b0000000000000001", load="0b1", addr13="0b1111111110001") == "0b0000000000000001"
+        assert screen.evaluate(_in16="0b0000000000000010", load="0b1", addr13="0b1111111100010") == "0b0000000000000010"
+        assert screen.evaluate(_in16="0b0000000000000011", load="0b1", addr13="0b1111111000011") == "0b0000000000000011"
+        assert screen.evaluate(_in16="0b1000000000000000", load="0b1", addr13="0b1111110000000") == "0b1000000000000000"
+        assert screen.evaluate(_in16="0b1010000000000000", load="0b1", addr13="0b1111111111101") == "0b1010000000000000"
+        assert screen.evaluate(_in16="0b1110000000000000", load="0b1", addr13="0b1111111111110") == "0b1110000000000000"
+        assert screen.evaluate(_in16="0b1111000000000000", load="0b1", addr13="0b1111111111111") == "0b1111000000000000"
+
+        # SCREEN: sequential load (000/XXX)
+        assert screen.evaluate(_in16="0b0000000000000000", load="0b0", addr13="0b0000000000000") == "0b0000000000000000"
+        assert screen.evaluate(_in16="0b0000000000000001", load="0b0", addr13="0b0000000000001") == "0b0000000000000001"
+        assert screen.evaluate(_in16="0b0000000000000010", load="0b0", addr13="0b0000000000010") == "0b0000000000000010"
+        assert screen.evaluate(_in16="0b0000000000000011", load="0b0", addr13="0b0000000000111") == "0b0000000000000011"
+        assert screen.evaluate(_in16="0b1000000000000000", load="0b0", addr13="0b0000000001100") == "0b1000000000000000"
+        assert screen.evaluate(_in16="0b1010000000000000", load="0b0", addr13="0b0000000011101") == "0b1010000000000000"
+        assert screen.evaluate(_in16="0b1110000000000000", load="0b0", addr13="0b0000001111110") == "0b1110000000000000"
+        assert screen.evaluate(_in16="0b1111000000000000", load="0b0", addr13="0b0000011111111") == "0b1111000000000000"
+
+        # SCREEN: sequential load (111/XXX)
+        assert screen.evaluate(_in16="0b0000000000000000", load="0b0", addr13="0b1111111111000") == "0b0000000000000000"
+        assert screen.evaluate(_in16="0b0000000000000001", load="0b0", addr13="0b1111111110001") == "0b0000000000000001"
+        assert screen.evaluate(_in16="0b0000000000000010", load="0b0", addr13="0b1111111100010") == "0b0000000000000010"
+        assert screen.evaluate(_in16="0b0000000000000011", load="0b0", addr13="0b1111111000011") == "0b0000000000000011"
+        assert screen.evaluate(_in16="0b1000000000000000", load="0b0", addr13="0b1111110000000") == "0b1000000000000000"
+        assert screen.evaluate(_in16="0b1010000000000000", load="0b0", addr13="0b1111111111101") == "0b1010000000000000"
+        assert screen.evaluate(_in16="0b1110000000000000", load="0b0", addr13="0b1111111111110") == "0b1110000000000000"
+        assert screen.evaluate(_in16="0b1111000000000000", load="0b0", addr13="0b1111111111111") == "0b1111000000000000"
 
 
 if __name__ == "__main__":
