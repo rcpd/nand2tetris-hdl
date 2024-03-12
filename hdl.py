@@ -826,7 +826,6 @@ class ALU(Gate):
 class DFF(Gate):
     """
     1 bit register, store new value if load else emit previous value
-
     // No HDL, implemented in Java on the course
     // DFF(in=Mout,out=Dout,out=out);
     """
@@ -1417,8 +1416,10 @@ class Dmux4Way3(Gate):
 
 class Screen(Gate):
     """
+    Simulate a 256x512 monochrome screen where each row in the visual screen
+    is represented by 32 consecutive 16-bit words.
     // No HDL, implemented in Java on the course
-    // Screen(in=in[16],load=load,address=[13],out=out[16]);
+    // Screen(in=in[16],load=load,address=address[13],out=out[16]);
     """
 
     def __init__(self, name=None):
@@ -1508,6 +1509,42 @@ class Memory(Gate):
         # select which out gets expressed
         return Mux4Way16().evaluate(a16=self.ram16k_out, b16=self.ram16k_out, c16=self.screen_out,
                                     d16=self.keyboard_out, sel2="0b" + self.addr15[-15:-13])
+
+
+class ROM32K(Gate):
+    """
+    Read-Only memory (ROM) of 16K registers
+    Implemented as RAM chips where load defaults to off
+    // No HDL, implemented in Java on the course
+    // ROM32K(address=address[15],out=out[16]);
+    }
+    """
+
+    def __init__(self, name=None):
+        super().__init__()
+        self.name = name
+        self.rom_load = "0b0"
+        self.rom_data = "0b0000000000000000"
+        self.rom16k_0 = RAM16K(name="rom_ram16k_0")
+        self.rom16k_1 = RAM16K(name="rom_ram16k_1")
+        self.rom16k_0_out = "0b0000000000000000"
+        self.rom16k_1_out = "0b0000000000000000"
+
+    def calculate(self):
+        # determine which chip is being addressed from MSB in address
+        # process memory maps: selective load, always read
+        # only evaluate selected block (python performance optimisation)
+        if "0b" + self.addr15[-15] == "0b0":
+            self.rom16k_0_out = self.rom16k_0.evaluate(_in16=self.rom_data, load=self.rom_load,
+                                                       addr14="0b" + self.addr15[-14:])
+        elif "0b" + self.addr15[-15] == "0b1":
+            self.rom16k_1_out = self.rom16k_1.evaluate(_in16=self.rom_data, load=self.rom_load,
+                                                       addr14="0b" + self.addr15[-14:])
+        else:
+            raise RuntimeError("Bad case in ROM32K: %s" % "0b" + self.addr15[-15])
+
+        # select which out gets expressed
+        return Mux16().evaluate(a16=self.rom16k_0_out, b16=self.rom16k_1_out, sel="0b" + self.addr15[-15])
 
 
 class CPU(Gate):
@@ -1782,6 +1819,8 @@ def main(test_all=False):
         _screen = Screen(name="screen_assert")
         _cpu = CPU(name="cpu_assert")
         _memory = Memory(name="memory_assert")
+        _rom32k = ROM32K(name="rom32k_assert")
+
         input_unit_test()
 
         # For two 1 inputs return a 1 output, else return a 1 output
@@ -2762,13 +2801,27 @@ def main(test_all=False):
         assert _cpu.evaluate(_in16="0b111" + "0" + "111010" + "000" + "110", b16="0b0000000000000000", reset="0b0") == \
             ("0b1111111111111111", "0b0", "0b0000000000001111", "0b0000000000001111", "0b0000000000000000")  # -1;JLE
 
+        # ROM32K
+        assert _rom32k.evaluate(addr15="0b000000000000000") == "0b0000000000000000"
+        assert _rom32k.evaluate(addr15="0b100000000000000") == "0b0000000000000000"
+        _rom32k.rom_load = "0b1"  # enable ROM bootloader
+        _rom32k.rom_data = "0b1111111111111111"
+        assert _rom32k.evaluate(addr15="0b000000000000000") == "0b1111111111111111"
+        assert _rom32k.evaluate(addr15="0b100000000000000") == "0b1111111111111111"
+        _rom32k.rom_load = "0b0"  # disable ROM bootloader
+        _rom32k.rom_data = "0b0000000000000000"
+        assert _rom32k.evaluate(addr15="0b000000000000000") == "0b1111111111111111"
+        assert _rom32k.evaluate(addr15="0b100000000000000") == "0b1111111111111111"
+
     # new tests go here
     pass
 
 
 if __name__ == "__main__":
-    main(test_all=False)
-    print("TEST_MAIN: Passed!")
+    # print("TEST_MAIN: Loading")
+    # main(test_all=False)
+    # print("TEST_MAIN: Passed!")
 
+    print("TEST_ALL: Loading")
     main(test_all=True)
     print("TEST_ALL: Passed!")
