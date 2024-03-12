@@ -896,7 +896,7 @@ class Register(Gate):
 
     def calculate(self):
         # can't use range as Register has to save state
-        # if self.load == "0b1":  # only update Bit on load=1 (python performance optimisation)
+        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
         self.bit0.evaluate(_in="0b"+self._in16[2], load=self.load)
         self.bit1.evaluate(_in="0b"+self._in16[3], load=self.load)
         self.bit2.evaluate(_in="0b"+self._in16[4], load=self.load)
@@ -1000,8 +1000,9 @@ class RAM8(Gate):
         self.d_out = "0b0000000000000000"
 
     def calculate(self):
-        dmux8w = DMux8Way().evaluate(_in=self.load, sel3=self.addr3)
         # only evaluate selected Register (python performance optimisation)
+        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3=self.addr3)
         if self.addr3 == "0b000":
             self.r0_out = self.r0.evaluate(_in16=self._in16, load=dmux8w[0])
         elif self.addr3 == "0b001":
@@ -1073,8 +1074,8 @@ class RAM64(Gate):
         self.ram8_d_out = "0b0000000000000000"
 
     def calculate(self):
-        # only evaluate selected RAM8 (python performance optimisation)
         # 3 MSB = RAM8 block, 3 LSB = Register
+        # only evaluate selected RAM8 block (python performance optimisation)
         # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
         dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr6[-6:-3])
         if "0b"+self.addr6[-6:-3] == "0b000":
@@ -1130,33 +1131,63 @@ class RAM512(Gate):
         Mux8Way16(a=r0out, b=r1out, c=r2out, d=r3out, e=r4out, f=r5out, g=r6out, h=r7out, sel=address[0..2], out=out);
     }
     """
-    def __init__(self):
+    def __init__(self, watermark=None):
         super().__init__()
-        self.r0 = RAM64()
-        self.r1 = RAM64()
-        self.r2 = RAM64()
-        self.r3 = RAM64()
-        self.r4 = RAM64()
-        self.r5 = RAM64()
-        self.r6 = RAM64()
-        self.r7 = RAM64()
-        self.d_out = "0b0000000000000000"
+        self.watermark = watermark
+        self.ram64_0 = RAM64()
+        self.ram64_1 = RAM64()
+        self.ram64_2 = RAM64()
+        self.ram64_3 = RAM64()
+        self.ram64_4 = RAM64()
+        self.ram64_5 = RAM64()
+        self.ram64_6 = RAM64()
+        self.ram64_7 = RAM64()
+        self.ram64_0_out = "0b0000000000000000"
+        self.ram64_1_out = "0b0000000000000000"
+        self.ram64_2_out = "0b0000000000000000"
+        self.ram64_3_out = "0b0000000000000000"
+        self.ram64_4_out = "0b0000000000000000"
+        self.ram64_5_out = "0b0000000000000000"
+        self.ram64_6_out = "0b0000000000000000"
+        self.ram64_7_out = "0b0000000000000000"
+        self.ram64_d_out = "0b0000000000000000"
 
     def calculate(self):
-        if self.load == "0b1":  # only update on load=1 (python performance optimisation)
-            dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr9[-6:])
-            r0 = self.r0.evaluate(_in16=self._in16, load=dmux8w[0], addr6="0b"+self.addr9[:-3])
-            r1 = self.r1.evaluate(_in16=self._in16, load=dmux8w[1], addr6="0b"+self.addr9[:-3])
-            r2 = self.r2.evaluate(_in16=self._in16, load=dmux8w[2], addr6="0b"+self.addr9[:-3])
-            r3 = self.r3.evaluate(_in16=self._in16, load=dmux8w[3], addr6="0b"+self.addr9[:-3])
-            r4 = self.r4.evaluate(_in16=self._in16, load=dmux8w[4], addr6="0b"+self.addr9[:-3])
-            r5 = self.r5.evaluate(_in16=self._in16, load=dmux8w[5], addr6="0b"+self.addr9[:-3])
-            r6 = self.r6.evaluate(_in16=self._in16, load=dmux8w[6], addr6="0b"+self.addr9[:-3])
-            r7 = self.r7.evaluate(_in16=self._in16, load=dmux8w[7], addr6="0b"+self.addr9[:-3])
-            # print("class", r0, r1, r2, r3, r4, r5, r6, r7)
-            self.d_out = Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7,
-                                              sel3="0b"+self.addr9[-6:])
-        return self.d_out
+        # 3 MSB = RAM64 block, 6 LSB = RAM8>Register blocks
+        # only evaluate selected RAM64 block (python performance optimisation)
+
+        print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr9[-9:-6])
+        if "0b"+self.addr9[-9:-6] == "0b000":
+            self.ram64_0_out = self.ram64_0.evaluate(_in16=self._in16, load=dmux8w[0], addr6="0b"+self.addr9[-6:])
+        elif "0b"+self.addr9[-9:-6] == "0b001":
+            self.ram64_1_out = self.ram64_1.evaluate(_in16=self._in16, load=dmux8w[1], addr6="0b"+self.addr9[-6:])
+        elif "0b"+self.addr9[-9:-6] == "0b010":
+            self.ram64_2_out = self.ram64_2.evaluate(_in16=self._in16, load=dmux8w[2], addr6="0b"+self.addr9[-6:])
+        elif "0b"+self.addr9[-9:-6] == "0b011":
+            self.ram64_3_out = self.ram64_3.evaluate(_in16=self._in16, load=dmux8w[3], addr6="0b"+self.addr9[-6:])
+        elif "0b"+self.addr9[-9:-6] == "0b100":
+            self.ram64_4_out = self.ram64_4.evaluate(_in16=self._in16, load=dmux8w[4], addr6="0b"+self.addr9[-6:])
+        elif "0b"+self.addr9[-9:-6] == "0b101":
+            self.ram64_5_out = self.ram64_5.evaluate(_in16=self._in16, load=dmux8w[5], addr6="0b"+self.addr9[-6:])
+        elif "0b"+self.addr9[-9:-6] == "0b110":
+            self.ram64_6_out = self.ram64_6.evaluate(_in16=self._in16, load=dmux8w[6], addr6="0b"+self.addr9[-6:])
+        elif "0b"+self.addr9[-9:-6] == "0b111":
+            self.ram64_7_out = self.ram64_7.evaluate(_in16=self._in16, load=dmux8w[7], addr6="0b"+self.addr9[-6:])
+        else:
+            raise RuntimeError("Bad case in RAM512: %s" % self.addr6[-9:-6])
+
+        # print("outputs:", self.ram8_0_out, self.ram8_1_out, self.ram8_2_out, self.ram8_3_out, self.ram8_4_out,
+        #       self.ram8_5_out, self.ram8_6_out, self.ram8_7_out)
+
+        self.ram64_d_out = Mux8Way16().evaluate(
+            a16=self.ram64_0_out, b16=self.ram64_0_out, c16=self.ram64_0_out, d16=self.ram64_0_out,
+            e16=self.ram64_0_out, f16=self.ram64_0_out, g16=self.ram64_0_out, h16=self.ram64_0_out,
+            sel3="0b"+self.addr9[-9:-6])
+
+        print(self.watermark, self.ram64_d_out)
+        return self.ram64_d_out
 
 
 class RAM4K(Gate):
@@ -1182,33 +1213,60 @@ class RAM4K(Gate):
         Mux8Way16(a=r0out, b=r1out, c=r2out, d=r3out, e=r4out, f=r5out, g=r6out, h=r7out, sel=address[0..2], out=out);
     }
     """
-    def __init__(self):
+    def __init__(self, watermark=None):
         super().__init__()
-        self.r0 = RAM512()
-        self.r1 = RAM512()
-        self.r2 = RAM512()
-        self.r3 = RAM512()
-        self.r4 = RAM512()
-        self.r5 = RAM512()
-        self.r6 = RAM512()
-        self.r7 = RAM512()
-        self.d_out = "0b0000000000000000"
+        self.watermark = watermark
+        self.ram512_0 = RAM512()
+        self.ram512_1 = RAM512()
+        self.ram512_2 = RAM512()
+        self.ram512_3 = RAM512()
+        self.ram512_4 = RAM512()
+        self.ram512_5 = RAM512()
+        self.ram512_6 = RAM512()
+        self.ram512_7 = RAM512()
+        self.ram512_0_out = "0b0000000000000000"
+        self.ram512_1_out = "0b0000000000000000"
+        self.ram512_2_out = "0b0000000000000000"
+        self.ram512_3_out = "0b0000000000000000"
+        self.ram512_4_out = "0b0000000000000000"
+        self.ram512_5_out = "0b0000000000000000"
+        self.ram512_6_out = "0b0000000000000000"
+        self.ram512_7_out = "0b0000000000000000"
+        self.ram512_d_out = "0b0000000000000000"
 
     def calculate(self):
-        if self.load == "0b1":  # only update on load=1 (python performance optimisation)
-            dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr12[-9:])
-            r0 = self.r0.evaluate(_in16=self._in16, load=dmux8w[0], addr9=self.addr12[:-3])
-            r1 = self.r1.evaluate(_in16=self._in16, load=dmux8w[1], addr9=self.addr12[:-3])
-            r2 = self.r2.evaluate(_in16=self._in16, load=dmux8w[2], addr9=self.addr12[:-3])
-            r3 = self.r3.evaluate(_in16=self._in16, load=dmux8w[3], addr9=self.addr12[:-3])
-            r4 = self.r4.evaluate(_in16=self._in16, load=dmux8w[4], addr9=self.addr12[:-3])
-            r5 = self.r5.evaluate(_in16=self._in16, load=dmux8w[5], addr9=self.addr12[:-3])
-            r6 = self.r6.evaluate(_in16=self._in16, load=dmux8w[6], addr9=self.addr12[:-3])
-            r7 = self.r7.evaluate(_in16=self._in16, load=dmux8w[7], addr9=self.addr12[:-3])
-            # print("class", r0, r1, r2, r3, r4, r5, r6, r7)
-            self.d_out = Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7,
-                                              sel3="0b"+self.addr12[-9:])
-        return self.d_out
+        # 3 MSB = RAM512 block, 9 LSB = RAM64>RAM8>Register blocks
+        # only evaluate selected RAM512 block (python performance optimisation)
+        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr12[-12:-9])
+        if "0b"+self.addr9[-12:-9] == "0b000":
+            self.ram512_0 = self.ram512_0.evaluate(_in16=self._in16, load=dmux8w[0], addr9=self.addr12[-9:])
+        elif "0b"+self.addr9[-12:-9] == "0b001":
+            self.ram512_1 = self.ram512_1.evaluate(_in16=self._in16, load=dmux8w[1], addr9=self.addr12[-9:])
+        elif "0b"+self.addr9[-12:-9] == "0b010":
+            self.ram512_2 = self.ram512_2.evaluate(_in16=self._in16, load=dmux8w[2], addr9=self.addr12[-9:])
+        elif "0b"+self.addr9[-12:-9] == "0b011":
+            self.ram512_3 = self.ram512_3.evaluate(_in16=self._in16, load=dmux8w[3], addr9=self.addr12[-9:])
+        elif "0b"+self.addr9[-12:-9] == "0b100":
+            self.ram512_4 = self.ram512_4.evaluate(_in16=self._in16, load=dmux8w[4], addr9=self.addr12[-9:])
+        elif "0b"+self.addr9[-12:-9] == "0b101":
+            self.ram512_5 = self.ram512_5.evaluate(_in16=self._in16, load=dmux8w[5], addr9=self.addr12[-9:])
+        elif "0b"+self.addr9[-12:-9] == "0b110":
+            self.ram512_6 = self.ram512_6.evaluate(_in16=self._in16, load=dmux8w[6], addr9=self.addr12[-9:])
+        elif "0b"+self.addr9[-12:-9] == "0b111":
+            self.ram512_7 = self.ram512_7.evaluate(_in16=self._in16, load=dmux8w[7], addr9=self.addr12[-9:])
+        else:
+            raise RuntimeError("Bad case in RAM4K: %s" % self.addr6[-12:-9])
+
+        # print("outputs:", self.ram8_0_out, self.ram8_1_out, self.ram8_2_out, self.ram8_3_out, self.ram8_4_out,
+        #       self.ram8_5_out, self.ram8_6_out, self.ram8_7_out)
+
+        self.ram512_d_out = Mux8Way16().evaluate(
+            a16=self.ram512_0, b16=self.ram512_1, c16=self.ram512_2, d16=self.ram512_3, e16=self.ram512_4, 
+            f16=self.ram512_5, g16=self.ram512_6, h16=self.ram512_7, sel3="0b"+self.addr12[-12:-9])
+
+        # print(self.watermark, self.d_out)
+        return self.ram512_d_out
 
 
 class RAM16K(Gate):
@@ -1230,24 +1288,37 @@ class RAM16K(Gate):
         Mux4Way16(a=r0out, b=r1out, c=r2out, d=r3out, sel=address[0..1], out=out);
     }
     """
-    def __init__(self):
+    def __init__(self, watermark=None):
         super().__init__()
-        self.r0 = RAM4K()
-        self.r1 = RAM4K()
-        self.r2 = RAM4K()
-        self.r3 = RAM4K()
-        self.d_out = "0b0000000000000000"
+        self.watermark = watermark
+        self.ram4k_0 = RAM4K()
+        self.ram4k_1 = RAM4K()
+        self.ram4k_2 = RAM4K()
+        self.ram4k_3 = RAM4K()
+        self.ram4k_d_out = "0b0000000000000000"
 
     def calculate(self):
-        if self.load == "0b1":  # only update on load=1 (python performance optimisation)
-            dmux4w = DMux4Way().evaluate(_in=self.load, sel2="0b"+self.addr14[-9:])
-            r0 = self.r0.evaluate(_in16=self._in16, load=dmux4w[0], addr9=self.addr14[:-3])
-            r1 = self.r1.evaluate(_in16=self._in16, load=dmux4w[1], addr9=self.addr14[:-3])
-            r2 = self.r2.evaluate(_in16=self._in16, load=dmux4w[2], addr9=self.addr14[:-3])
-            r3 = self.r3.evaluate(_in16=self._in16, load=dmux4w[3], addr9=self.addr14[:-3])
-            # print("class", r0, r1, r2, r3)
-            Mux4Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, sel2="0b"+self.addr14[-9:])
-        return self.d_out
+        # 2 MSB = RAM4K block, 12 LSB = RAM512>RAM64>RAM8>Register blocks
+        # only evaluate selected RAM512 block (python performance optimisation)
+        # print("\ninputs:", self.watermark, self._in16, self.load, self.addr6)
+        dmux4w = DMux4Way().evaluate(_in=self.load, sel2="0b"+self.addr14[-14:-12])
+        if "0b"+self.addr9[-14:-12] == "0b00":
+            self.ram4k_0 = self.ram4k_0.evaluate(_in16=self._in16, load=dmux4w[0], addr9=self.addr14[-12:])
+        if "0b"+self.addr9[-12:-12] == "0b01":
+            self.ram4k_1 = self.ram4k_1.evaluate(_in16=self._in16, load=dmux4w[1], addr9=self.addr14[-12:])
+        if "0b"+self.addr9[-12:-12] == "0b10":
+            self.ram4k_2 = self.ram4k_2.evaluate(_in16=self._in16, load=dmux4w[2], addr9=self.addr14[-12:])
+        if "0b"+self.addr9[-12:-12] == "0b11":
+            self.ram4k_3 = self.ram4k_3.evaluate(_in16=self._in16, load=dmux4w[3], addr9=self.addr14[-12:])
+
+        # print("outputs:", self.ram8_0_out, self.ram8_1_out, self.ram8_2_out, self.ram8_3_out, self.ram8_4_out,
+        #       self.ram8_5_out, self.ram8_6_out, self.ram8_7_out)
+
+        self.ram4k_d_out = Mux4Way16().evaluate(
+            a16=self.ram4k_0, b16=self.ram4k_0, c16=self.ram4k_0, d16=self.ram4k_0, sel2="0b"+self.addr14[-14:-12])
+
+        # print(self.watermark, self.d_out)
+        return self.ram4k_d_out
     
 
 def input_unit_test():
