@@ -33,16 +33,19 @@ class Gate(object):
         self.ny = None
         self.f = None
         self.no = None
+        self.load = None
+        self.inc = None
+        self.reset = None
 
     def evaluate(self, a=None, b=None, c=None, _in=None, sel=None, sel2=None, sel3=None, _in8=None, _in16=None,
-                 a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None,
-                 x=None, y=None, zx=None, nx=None, zy=None, ny=None, f=None, no=None):
+                 a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None, x=None, y=None,
+                 zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None):
         """
         validate input, None = uninitialized
         """
         # test flags
-        one_bit_inputs = {"a": a, "b": b, "c": c, "_in": _in, "sel": sel,
-                          "zx": zx, "nx": nx, "zy": zy, "ny": ny, "f": f, "no": no}
+        one_bit_inputs = {"a": a, "b": b, "c": c, "_in": _in, "sel": sel, "zx": zx, "nx": nx, "zy": zy, "ny": ny,
+                          "f": f, "no": no, "load": load, "inc": inc, "reset": reset}
         
         for flag in one_bit_inputs:
             if one_bit_inputs[flag] is not None:
@@ -84,6 +87,9 @@ class Gate(object):
         self.h16 = h16
         self.x = x
         self.y = y
+        self.load = load
+        self.inc = inc
+        self.reset = reset
 
         if sel2 is not None:
             if type(sel2) is not str:
@@ -629,7 +635,7 @@ class Inc16(Gate):
     }
     """
     def calculate(self):
-        return Add16().evaluate(a16=self.a16, b16="0b0000000000000001")
+        return Add16().evaluate(a16=self._in16, b16="0b0000000000000001")
 
 
 class ALU(Gate):
@@ -723,6 +729,98 @@ class ALU(Gate):
         return result, self.zr, self.ng
 
 
+class Bit(Gate):
+    """
+    1 bit register, if load emit in else dff (previous value)
+    // If load[t] == 1 then out[t+1] = in[t] else out does not change (out[t+1] = out[t])
+
+    CHIP Bit {
+        IN in, load;
+        OUT out;
+
+        PARTS:
+        Mux(a=Dout,b=in,sel=load,out=Mout);
+        DFF(in=Mout,out=Dout,out=out);
+    }
+    """
+    def __init__(self):
+        super().__init__()
+        self.dff = "0b0"  # DFF not implemented (primitive)
+
+    def calculate(self):
+        self.dff = Mux().evaluate(a=self.dff, b=self._in, sel=self.load)
+        return self.dff
+
+
+class Register(Gate):
+    """
+    16 bit register, if load emit in else dff (previous value)
+    // If load[t] == 1 then out[t+1] = in[t] else out does not change
+
+    CHIP Register {
+        IN in[16], load;
+        OUT out[16];
+
+        PARTS:
+        Bit(in=in[0], load=load, out=out[0]);
+        Bit(in=in[1], load=load, out=out[1]);
+        Bit(in=in[2], load=load, out=out[2]);
+        Bit(in=in[3], load=load, out=out[3]);
+        Bit(in=in[4], load=load, out=out[4]);
+        Bit(in=in[5], load=load, out=out[5]);
+        Bit(in=in[6], load=load, out=out[6]);
+        Bit(in=in[7], load=load, out=out[7]);
+        Bit(in=in[8], load=load, out=out[8]);
+        Bit(in=in[9], load=load, out=out[9]);
+        Bit(in=in[10], load=load, out=out[10]);
+        Bit(in=in[11], load=load, out=out[11]);
+        Bit(in=in[12], load=load, out=out[12]);
+        Bit(in=in[13], load=load, out=out[13]);
+        Bit(in=in[14], load=load, out=out[14]);
+        Bit(in=in[15], load=load, out=out[15]);
+    }
+    """
+    def calculate(self):
+        byte_str = "0b"
+        for i in reversed(range(1, 17)):
+            byte_str += Bit().evaluate(_in="0b"+self._in16[i*-1], load=self.load)[2:]
+        return byte_str
+
+
+class PC(Gate):
+    """
+    A 16-bit counter with load and reset control bits.
+
+    // if      (reset[t] == 1) out[t+1] = 0
+    // else if (load[t] == 1)  out[t+1] = in[t]
+    // else if (inc[t] == 1)   out[t+1] = out[t] + 1  (integer addition)
+    // else                    out[t+1] = out[t]
+
+    CHIP PC {
+    IN in[16],load,inc,reset;
+    OUT out[16];
+
+    PARTS:
+    Inc16(in=feedback, out=pc);
+    Mux16(a=feedback, b=pc, sel=inc, out=w0);
+    Mux16(a=w0, b=in, sel=load, out=w1);
+    Mux16(a=w1, b=false, sel=reset, out=cout);
+    Register(in=cout, load=true, out=out, out=feedback);
+    }
+    """
+    def __init__(self):
+        super().__init__()
+        self.feedback = "0b0000000000000000"
+
+    def calculate(self):
+        pc_inc = Inc16().evaluate(_in16=self.feedback)
+        mux16_w0 = Mux16().evaluate(a16=self.feedback, b16=pc_inc, sel=self.inc)
+        mux16_w1 = Mux16().evaluate(a16=mux16_w0, b16=self._in16, sel=self.load)
+        mux16_cout = Mux16().evaluate(a16=mux16_w1, b16="0b0000000000000000", sel=self.reset)
+        self.feedback = Register().evaluate(_in16=mux16_cout, load="0b1")
+        return self.feedback
+
+
 def input_unit_test():
     """
     Test input sizes: catch RuntimeException(s)
@@ -803,6 +901,9 @@ def main():
     _add16 = Add16()
     _inc16 = Inc16()
     _alu = ALU()
+    _bit = Bit()
+    _register = Register()
+    _pc = PC()
     input_unit_test()
 
     # For two 1 inputs return a 1 output, else return a 1 output
@@ -956,54 +1057,56 @@ def main():
     assert _add16.evaluate(a16="0b0000000000000000", b16="0b0000000011111111") == "0b0000000011111111"
 
     # Increment a 16 bit number
-    assert _inc16.evaluate(a16="0b0000000000000000") == "0b0000000000000001"
-    assert _inc16.evaluate(a16="0b0000000000000010") == "0b0000000000000011"
-    assert _inc16.evaluate(a16="0b0000000000000011") == "0b0000000000000100"
-    assert _inc16.evaluate(a16="0b1111111111111110") == "0b1111111111111111"
-    """
-    ALU (Arithmetic Logic Unit) Computes one of the following functions:
-    // if (zx == 1) set x = 0        // 16-bit constant
-    // if (zy == 1) set y = 0        // 16-bit constant
-    // if (nx == 1) set x = !x       // bitwise not
-    // if (ny == 1) set y = !y       // bitwise not
-    // if (f == 1)  set out = x + y  // integer 2's complement addition
-    // if (f == 0)  set out = x & y  // bitwise and
-    // if (no == 1) set out = !out   // bitwise not
-    // if (out == 0) set zr = 1
-    // if (out < 0) set ng = 1
+    assert _inc16.evaluate(_in16="0b0000000000000000") == "0b0000000000000001"
+    assert _inc16.evaluate(_in16="0b0000000000000010") == "0b0000000000000011"
+    assert _inc16.evaluate(_in16="0b0000000000000011") == "0b0000000000000100"
+    assert _inc16.evaluate(_in16="0b1111111111111110") == "0b1111111111111111"
 
-    CHIP ALU {
-    IN
-        x[16], y[16],  // 16-bit inputs
-        zx, nx, zy, ny, f, no; // 1 bit flags
-
-    OUT
-        out[16], // 16-bit output
-        zr, ng; // 1 bit flags
-    """
-    # addition
+    # ALU: addition
     assert _alu.evaluate(x="0b0000000000000000", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
     assert _alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000010", "0b0", "0b0")
 
-    # zx/yx
+    # ALU: zx/yx
     assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b1", zy="0b1", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
     assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b1", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
     assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b1", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
 
-    # nx/ny
+    # ALU: nx/ny
     assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b1", ny="0b1", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
     assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b1", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
     assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b1", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
 
-    # and
+    # ALU: and
     assert _alu.evaluate(x="0b0000000000000000", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
     assert _alu.evaluate(x="0b0000000000000000", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
     assert _alu.evaluate(x="0b1111111111111111", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
     assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
 
-    # not(and)
+    # ALU: not(and)
     assert _alu.evaluate(x="0b1111111111111111", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b1111111111111111", "0b0", "0b1")
     assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b0000000000000000", "0b1", "0b0")
+
+    # 1 bit register, if load emit in else dff (previous value)
+    assert _bit.evaluate(_in="0b0", load="0b0") == "0b0"
+    assert _bit.evaluate(_in="0b0", load="0b1") == "0b0"
+    assert _bit.evaluate(_in="0b1", load="0b0") == "0b0"
+    assert _bit.evaluate(_in="0b1", load="0b1") == "0b1"
+
+    # 16-bit register, if load emit in else dff (previous value)
+    assert _register.evaluate(_in16="0b0000000000000000", load="0b0") == "0b0000000000000000"
+    assert _register.evaluate(_in16="0b0000000000000000", load="0b1") == "0b0000000000000000"
+    assert _register.evaluate(_in16="0b1111111111111111", load="0b0") == "0b0000000000000000"
+    assert _register.evaluate(_in16="0b1111111111111111", load="0b1") == "0b1111111111111111"
+    assert _register.evaluate(_in16="0b0000000000000001", load="0b1") == "0b0000000000000001"
+    assert _register.evaluate(_in16="0b1000000000000000", load="0b1") == "0b1000000000000000"
+
+    # PC: load 0/1
+    assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
+    assert _pc.evaluate(_in16="0b1111111111111111", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
+    assert _pc.evaluate(_in16="0b0000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000000"
+    assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b0", reset="0b0") == "0b1111111111111111"
+    # TODO: inc/reset
+
 
 
 if __name__ == "__main__":
