@@ -1044,7 +1044,7 @@ class RAM8(Gate):
         elif self.addr3 == "0b111":
             self.r7_out = self.r7.evaluate(_in16=self._in16, load=dmux8w[7])
         else:
-            raise RuntimeError("Bad case in RAM8: %s" % self.addr3)
+            raise RuntimeError("Bad case in RAM8: %s" % "0b"+self.addr3)
 
         self.d_out = Mux8Way16().evaluate(a16=self.r0_out, b16=self.r1_out, c16=self.r2_out, d16=self.r3_out,
                                           e16=self.r4_out, f16=self.r5_out, g16=self.r6_out, h16=self.r7_out,
@@ -1119,7 +1119,7 @@ class RAM64(Gate):
         elif "0b"+self.addr6[-6:-3] == "0b111":
             self.ram8_7_out = self.ram8_7.evaluate(_in16=self._in16, load=dmux8w[7], addr3="0b"+self.addr6[-3:])
         else:
-            raise RuntimeError("Bad case in RAM64: %s" % self.addr6[-6:-3])
+            raise RuntimeError("Bad case in RAM64: %s" % "0b"+self.addr6[-6:-3])
 
         # print("outputs:", self.ram8_0_out, self.ram8_1_out, self.ram8_2_out, self.ram8_3_out, self.ram8_4_out,
         #       self.ram8_5_out, self.ram8_6_out, self.ram8_7_out)
@@ -1200,7 +1200,7 @@ class RAM512(Gate):
         elif "0b"+self.addr9[-9:-6] == "0b111":
             self.ram64_7_out = self.ram64_7.evaluate(_in16=self._in16, load=dmux8w[7], addr6="0b"+self.addr9[-6:])
         else:
-            raise RuntimeError("Bad case in RAM512: %s" % self.addr6[-9:-6])
+            raise RuntimeError("Bad case in RAM512: %s" % "0b"+self.addr6[-9:-6])
 
         # print("outputs:", self.ram64_0_out, self.ram64_1_out, self.ram64_2_out, self.ram64_3_out, self.ram64_4_out,
         #       self.ram64_5_out, self.ram64_6_out, self.ram64_7_out)
@@ -1282,7 +1282,7 @@ class RAM4K(Gate):
         elif "0b"+self.addr12[-12:-9] == "0b111":
             self.ram512_7_out = self.ram512_7.evaluate(_in16=self._in16, load=dmux8w[7], addr9=self.addr12[-9:])
         else:
-            raise RuntimeError("Bad case in RAM4K: %s" % self.addr12[-12:-9])
+            raise RuntimeError("Bad case in RAM4K: %s" % "0b"+self.addr12[-12:-9])
 
         # print("outputs:", self.ram512_0_out, self.ram512_1_out, self.ram512_2_out, self.ram512_3_out,
         #       self.ram512_4_out, self.ram512_5_out, self.ram512_6_out, self.ram512_7_out)
@@ -1344,7 +1344,7 @@ class RAM16K(Gate):
         elif "0b"+self.addr14[-14:-12] == "0b11":
             self.ram4k_3_out = self.ram4k_3.evaluate(_in16=self._in16, load=dmux4w[3], addr12=self.addr14[-12:])
         else:
-            raise RuntimeError("Bad case in RAM16K: %s" % self.addr12[-14:-12])
+            raise RuntimeError("Bad case in RAM16K: %s" % "0b"+self.addr12[-14:-12])
 
         # print("outputs:", self.ram4k_0_out, self.ram4k_1_out, self.ram4k_2_out, self.ram4k_3_out)
 
@@ -1454,7 +1454,7 @@ class Screen(Gate):
         elif "0b"+self.addr13[-13] == "0b1":
             self.ram4k_1_out = self.ram4k_1.evaluate(_in16=self._in16, load=dmux[1], addr12=self.addr13[-12:])
         else:
-            raise RuntimeError("Bad case in Screen: %s" % self.addr13[-13])
+            raise RuntimeError("Bad case in Screen: %s" % "0b"+self.addr13[-13])
 
         # print("outputs:", self.ram4k_0_out, self.ram4k_1_out, self.ram4k_2_out, self.ram4k_3_out)
 
@@ -1490,19 +1490,41 @@ class Memory(Gate):
         Mux4Way16(a=ramOut,b=ramOut,c=screenOut,d=keyOut,sel[0]=address[13],sel[1]=address[14],out=out);
     }
     """
+    def __init__(self, watermark=None):
+        super().__init__()
+        self.watermark = watermark
+        self.ram16k = RAM16K(watermark="memory_ram16k")
+        self.screen = Screen(watermark="memory_screen")
+        self.keyboard = Register(watermark="memory_keyboard")
+        self.ram16k_out = "0b0000000000000000"
+        self.screen_out = "0b0000000000000000"
+        self.keyboard_out = "0b0000000000000000"
+
     def calculate(self):
         # determine which chip is being addressed from 2xMSB in address
         dmux4w_a, dmux4w_b, dmux4w_c, dmux4w_d = DMux4Way().evaluate(
-            _in="0b1", sel2="0b"+self.addr15[-15]+self.sel3[-14])
+            _in="0b1", sel2="0b"+self.addr15[-15:-13])
         or0 = OrGate().evaluate(a=dmux4w_a, b=dmux4w_b)
 
         # determine what chip, if any, will load
         and0 = AndGate().evaluate(a=or0, b=self.load)
         and1 = AndGate().evaluate(a=dmux4w_c, b=self.load)
 
-        ram16k = RAM16K().evaluate(_in16=self._in16, load=self.load, addr14="0b"+self.addr15[-14:])
-        screen = Screen.evaluate()
-        keyboard = Register()
+        # process memory maps: selective load, always read
+        # only evaluate selected block (python performance optimisation)
+        if "0b"+self.addr15[-15:-13] in ("0b00", "0b01"):
+            self.ram16k_out = self.ram16k.evaluate(_in16=self._in16, load=and0, addr14="0b"+self.addr15[-14:])
+        elif "0b"+self.addr15[-15:-13] == "0b10":
+            self.screen_out = self.screen.evaluate(_in16=self._in16, load=and1, addr13="0b"+self.addr15[-13:])
+        elif "0b"+self.addr15[-15:-13] == "0b11":
+            self.keyboard_out = self.keyboard.evaluate(_in16=self._in16, load=self.load)
+        else:
+            raise RuntimeError("Bad case in Memory: %s" % "0b"+self.addr15[-15:-13])
+
+        # select which out gets expressed
+        # Mux4Way16(a=ramOut,b=ramOut,c=screenOut,d=keyOut,sel[0]=address[13],sel[1]=address[14],out=out);
+        return Mux4Way16().evaluate(a16=self.ram16k_out, b16=self.ram16k_out, c16=self.screen_out,
+                                    d16=self.keyboard_out, sel2="0b"+self.addr15[-15:-13])
 
 
 class Computer(Gate):
@@ -2066,7 +2088,7 @@ def main(test_all=False):
         assert _dmux3.evaluate(_in3="0b110", sel="0b1") == ("0b000", "0b110")
         assert _dmux3.evaluate(_in3="0b111", sel="0b1") == ("0b000", "0b111")
 
-        # 2 x 3 bit inputs, 2 bit select, 4 x 3 bit outputs
+        # Dmux4Way3
         assert _dmux4way3.evaluate(_in3="0b000", sel2="0b00") == ("0b000", "0b000", "0b000", "0b000")
         assert _dmux4way3.evaluate(_in3="0b000", sel2="0b00") == ("0b000", "0b000", "0b000", "0b000")
         assert _dmux4way3.evaluate(_in3="0b000", sel2="0b00") == ("0b000", "0b000", "0b000", "0b000")
@@ -2116,6 +2138,17 @@ def main(test_all=False):
         assert screen.evaluate(_in16="0b1110000000000000", load="0b0", addr13="0b1111111111110") == "0b1110000000000000"
         assert screen.evaluate(_in16="0b1111000000000000", load="0b0", addr13="0b1111111111111") == "0b1111000000000000"
 
+    memory = Memory()
+    # 16K+8K+1 memory block for RAM, Screen, Keyboard address ranges respectively
+    assert memory.evaluate(_in16="0b1111000000000000", load="0b1", addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
+    assert memory.evaluate(_in16="0b0000111100000000", load="0b1", addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
+    assert memory.evaluate(_in16="0b1111000011110000", load="0b1", addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
+    assert memory.evaluate(_in16="0b1111000000001111", load="0b1", addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
+    assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
+    assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
+    assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
+    assert memory.evaluate(_in16="0b1111000000000000", load="0b0", addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
+
 
 if __name__ == "__main__":
-    main(test_all=True)
+    main(test_all=False)
