@@ -1,14 +1,12 @@
 """"
-A rough example of a Python implementation of the Nand2Tetris HDL
-
+Python implementation of the HACK architecture modelled after the Nand2Tetris HDL
 NAND is a primitive implemented at the hardware level so need to define the logic ourselves
 All subsequent gates can be expressed via increasingly complex abstractions of NAND
-This is typically provided to the student as a built-in class for Nand2Tetris
-All subsequent gates must be implemented by the student
 """
 
 # TODO: gates can be passed function inputs that do nothing
 # TODO: test scripts?
+from abc import ABC
 
 
 class Gate(object):
@@ -595,6 +593,8 @@ class HalfAdder(Gate):
 
 class FullAdder(Gate):
     """
+    Computes the sum of 3 x 1 bit inputs, output carry bit & sum bit
+
     CHIP FullAdder {
     IN a, b, c;  // 1-bit inputs
     OUT sum,     // Right bit of a + b + c
@@ -605,7 +605,6 @@ class FullAdder(Gate):
     HalfAdder(a=c, b=sumAB, sum=sum, carry=carryABC);
     Or(a=carryABC, b=carryAB, out=carry);
     }
-
     """
     def calculate(self):
         carry_ab, sum_ab = HalfAdder().evaluate(a=self.a, b=self.b)
@@ -613,8 +612,11 @@ class FullAdder(Gate):
         carry = OrGate().evaluate(a=carry_abc, b=carry_ab)
         return carry, _sum
 
+
 class Add16(Gate):
     """
+    Adds two 16-bit values and output 16 bit result, the most significant carry bit is ignored
+
     CHIP Add16 {
         IN a[16], b[16];
         OUT out[16];
@@ -638,6 +640,36 @@ class Add16(Gate):
         FullAdder(a=a[15], b=b[15], c=carry15, sum=out[15], carry=carry16);
     }
     """
+    def calculate(self):
+        _sum = ["0"] * 16
+        carry = ["0"] * 17
+        carry[0], _sum[0] = HalfAdder().evaluate(a="0b"+self.a16[-16], b="0b"+self.b16[-16])
+        for i in reversed(range(1, 16)):
+            i = i * -1
+            carry[i-1], _sum[i] = FullAdder().evaluate(a="0b"+self.a16[i], b="0b"+self.b16[i], c="0b"+carry[i])
+
+        _sum_result = "0b"
+        for bit in _sum:
+            _sum_result += bit.replace("0b", "")
+
+        return _sum_result
+
+
+class Inc16(Gate):
+    """
+    Increment a 16 bit number
+
+    CHIP Inc16 {
+    IN in[16];
+    OUT out[16];
+
+    PARTS:
+    Add16(a=in, b[0]=true, b[1..15]=false, out=out);
+    }
+    """
+    def calculate(self):
+        return Add16().evaluate(a16=self.a16, b16="0b0000000000000001")
+
 
 def input_unit_test():
     """
@@ -678,7 +710,6 @@ def input_unit_test():
 def main():
     """
     Sanity check our truth tables for each gate as implemented
-    These unit tests are typically provided to the student in Nand2Tetris so they can confirm their results
     """
     _nand = NandGate()
     _not = NotGate()
@@ -699,7 +730,8 @@ def main():
     _dmux8way = DMux8Way()
     _halfAdder = HalfAdder()
     _fullAdder = FullAdder()
-
+    _add16 = Add16()
+    _inc16 = Inc16()
     input_unit_test()
 
     # For two 1 inputs return a 1 output, else return a 1 output
@@ -841,6 +873,18 @@ def main():
     assert _fullAdder.evaluate(a="0b0", b="0b1", c="0b1") == ("0b1", "0b0")
     assert _fullAdder.evaluate(a="0b1", b="0b0", c="0b1") == ("0b1", "0b0")
     assert _fullAdder.evaluate(a="0b1", b="0b1", c="0b0") == ("0b1", "0b0")
+
+    # Adds two 16-bit values and output 16 bit result, the most significant carry bit is ignored
+    assert _add16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000") == "0b0000000000000000"
+    assert _add16.evaluate(a16="0b1111111111111110", b16="0b0000000000000001") == "0b1111111111111111"
+    assert _add16.evaluate(a16="0b1111111100000000", b16="0b0000000000000000") == "0b1111111100000000"
+    assert _add16.evaluate(a16="0b0000000011111111", b16="0b0000000000000000") == "0b0000000011111111"
+    assert _add16.evaluate(a16="0b0000000000000000", b16="0b1111111100000000") == "0b1111111100000000"
+    assert _add16.evaluate(a16="0b0000000000000000", b16="0b0000000011111111") == "0b0000000011111111"
+
+    # Increment a 16 bit number
+    assert _inc16.evaluate(a16="0b0000000000000000") == "0b0000000000000001"
+    assert _inc16.evaluate(a16="0b1111111111111110") == "0b1111111111111111"
 
 
 if __name__ == "__main__":
