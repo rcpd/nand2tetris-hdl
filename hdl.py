@@ -1,14 +1,16 @@
 """"
 A rough example of a Python implementation of the Nand2Tetris HDL
+
+NAND is a primitive implemented at the hardware level so need to define the logic ourselves
+All subsequent gates can be expressed via increasingly complex abstractions of NAND
+This is typically provided to the student as a built-in class for Nand2Tetris
+All subsequent gates must be implemented by the student
 """
 
 
 class NandGate(object):
     """
-    NAND is a primitive implemented at the hardware level so need to the logic ourselves
-    All subsequent gates can be expressed via increasingly complex abstractions of NAND
-    This is typically provided to the student as a built-in class for Nand2Tetris
-    All subsequent gates must be implemented by the student
+    For two high inputs return a low output, else return a high output
     """
     def __init__(self, a, b):
         self.a = a
@@ -40,7 +42,7 @@ class NotGate(object):
 
 class AndGate(object):
     """
-    This implementation is left to the student in Nand2Tetris
+    For two high inputs return a high output, else return a low output
     """
     def __init__(self, a, b):
         self.a = a
@@ -49,35 +51,47 @@ class AndGate(object):
 
     def evaluate(self, a, b):
         """
-        Now we can combine a NAND with a NOT to get a regular AND
+        Now we can combine a NAND with a NOT to get a regular AND gate
         """
         nand_out = NandGate(a, b).out
         return NotGate(nand_out).out
 
 
 class OrGate(object):
-    def __init__(self, a, b):
-        raise NotImplementedError
-
-
-class NorGate(object):
+    """
+    If either of the two inputs are high return a high output, else return a low output
+    """
     def __init__(self, a, b):
         raise NotImplementedError
 
 
 class XorGate(object):
+    """
+    If the two inputs are different return a high output, else return a low output
+    """
+    def __init__(self, a, b):
+        raise NotImplementedError
+
+
+class NorGate(object):
+    """
+    If either of the two inputs are high return a low output, else return a high output
+    """
     def __init__(self, a, b):
         raise NotImplementedError
 
 
 class XNorGate(object):
+    """
+    If the two inputs are the same return a high output, else return a low output
+    """
     def __init__(self, a, b):
         raise NotImplementedError
 
 
 def main():
     """
-    Sanity check out truth tables for each gate as implemented
+    Sanity check our truth tables for each gate as implemented
     These unit tests are typically provided to the student in Nand2Tetris so they can confirm their results
     """
     assert NandGate(True, True).out is False
