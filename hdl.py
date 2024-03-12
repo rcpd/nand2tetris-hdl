@@ -761,7 +761,9 @@ class ALU(Gate):
 class DFF(Gate):
     """
     1 bit register, store new value if load else emit previous value
+
     // No HDL, implemented in Java on the course
+    // DFF(in=Mout,out=Dout,out=out);
     """
     def __init__(self):
         super().__init__()
