@@ -25,6 +25,8 @@ class Gate(object):
         self.f16 = None
         self.g16 = None
         self.h16 = None
+        self.x = None
+        self.y = None
         self.zx = None
         self.nx = None
         self.zy = None
@@ -34,7 +36,7 @@ class Gate(object):
 
     def evaluate(self, a=None, b=None, c=None, _in=None, sel=None, sel2=None, sel3=None, _in8=None, _in16=None,
                  a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None,
-                 zx=None, nx=None, zy=None, ny=None, f=None, no=None):
+                 x=None, y=None, zx=None, nx=None, zy=None, ny=None, f=None, no=None):
         """
         validate input, None = uninitialized
         """
@@ -47,17 +49,17 @@ class Gate(object):
                 if type(one_bit_inputs[flag]) is not str:
                     one_bit_inputs[flag] = bin(one_bit_inputs[flag])
                 if one_bit_inputs[flag] not in ("0b0", "0b1"):
-                    raise RuntimeError("%s input must be 1 bit" % flag)
+                    raise RuntimeError("%s input must be 1 bit (value was %s)" % (flag, one_bit_inputs[flag]))
         
         sixteen_bit_inputs = {"_in16": _in16, "a16": a16, "b16": b16, "c16": c16, "d16": d16, "e16": e16, "f16": f16,
-                              "g16": g16, "h16": h16}
+                              "g16": g16, "h16": h16, "x": x, "y": y}
 
         for flag in sixteen_bit_inputs:
             if sixteen_bit_inputs[flag] is not None:
                 if type(sixteen_bit_inputs[flag]) is not str:
                     sixteen_bit_inputs[flag] = bin(sixteen_bit_inputs[flag])
                 if int(sixteen_bit_inputs[flag], 2) < 0 or int(sixteen_bit_inputs[flag], 2) > 65535:
-                    raise RuntimeError("%s input must be 1 bit" % flag)
+                    raise RuntimeError("%s input must be 16 bits (value was %s)" % (flag, sixteen_bit_inputs[flag]))
                 
         # set inputs (either valid or None, not worth retesting for None)
         self.a = a
@@ -80,7 +82,9 @@ class Gate(object):
         self.f16 = f16
         self.g16 = g16
         self.h16 = h16
-        
+        self.x = x
+        self.y = y
+
         if sel2 is not None:
             if type(sel2) is not str:
                 sel2 = bin(sel2)
@@ -140,7 +144,7 @@ class NotGate(Gate):
         In this case it is passed to both inputs of the NAND gate
         """
         # endianness does not matter as only 1 bit returned
-        return NandGate().evaluate(a=self.a, b=self.a)
+        return NandGate().evaluate(a=self._in, b=self._in)
 
 
 class Not16Gate(Gate):
@@ -175,7 +179,7 @@ class Not16Gate(Gate):
         # HACK = LSB = 0000000000000001
         # PYBS = MSB = 1000000000000000
         for i in reversed(range(1, 17)):
-            byte_str += NotGate().evaluate(a="0b"+self.a16[i*-1])[2:]
+            byte_str += NotGate().evaluate(_in="0b"+self._in16[i*-1])[2:]
         return byte_str
 
 
@@ -198,7 +202,7 @@ class AndGate(Gate):
         """
         # endianness does not matter as only 1 bit returned
         nand_a = NandGate().evaluate(a=self.a, b=self.b)
-        return NotGate().evaluate(a=nand_a)
+        return NotGate().evaluate(_in=nand_a)
 
 
 class And16Gate(Gate):
@@ -430,9 +434,9 @@ class Mux4Way16(Gate):
     """
     def calculate(self):
         # endianness only matters for selector / result order
-        mux16_0 = Mux16().evaluate(a16=self.a16, b16=self.b16, sel="0b"+self.sel2[-1])
-        mux16_1 = Mux16().evaluate(a16=self.c16, b16=self.d16, sel="0b"+self.sel2[-1])
-        return Mux16().evaluate(a16=mux16_0, b16=mux16_1, sel="0b"+self.sel2[-2])
+        mux16_ab = Mux16().evaluate(a16=self.a16, b16=self.b16, sel="0b"+self.sel2[-1])
+        mux16_cd = Mux16().evaluate(a16=self.c16, b16=self.d16, sel="0b"+self.sel2[-1])
+        return Mux16().evaluate(a16=mux16_ab, b16=mux16_cd, sel="0b"+self.sel2[-2])
 
 
 class Mux8Way16(Gate):
@@ -453,11 +457,11 @@ class Mux8Way16(Gate):
     """
     def calculate(self):
         # endianness only matters for selector / result order
-        mux4way16_0 = Mux4Way16().evaluate(a16=self.a16, b16=self.b16, c16=self.c16, d16=self.d16,
-                                           sel2="0b"+self.sel3[-2]+self.sel3[-1])
-        mux4way16_1 = Mux4Way16().evaluate(a16=self.e16, b16=self.f16, c16=self.g16, d16=self.h16,
-                                           sel2="0b"+self.sel3[-2]+self.sel3[-1])
-        return Mux16().evaluate(a16=mux4way16_0, b16=mux4way16_1, sel="0b"+self.sel3[-3])
+        mux4way16_ad = Mux4Way16().evaluate(a16=self.a16, b16=self.b16, c16=self.c16, d16=self.d16,
+                                            sel2="0b"+self.sel3[-2]+self.sel3[-1])
+        mux4way16_eh = Mux4Way16().evaluate(a16=self.e16, b16=self.f16, c16=self.g16, d16=self.h16,
+                                            sel2="0b"+self.sel3[-2]+self.sel3[-1])
+        return Mux16().evaluate(a16=mux4way16_ad, b16=mux4way16_eh, sel="0b"+self.sel3[-3])
 
 
 class DMux(Mux):
@@ -579,31 +583,31 @@ class Add16(Gate):
         OUT out[16];
 
         PARTS:
-        HalfAdder(a=a[0], b=b[0], sum=out[0], carry=carry1);
-        FullAdder(a=a[1], b=b[1], c=carry1, sum=out[1], carry=carry2);
-        FullAdder(a=a[2], b=b[2], c=carry2, sum=out[2], carry=carry3);
-        FullAdder(a=a[3], b=b[3], c=carry3, sum=out[3], carry=carry4);
-        FullAdder(a=a[4], b=b[4], c=carry4, sum=out[4], carry=carry5);
-        FullAdder(a=a[5], b=b[5], c=carry5, sum=out[5], carry=carry6);
-        FullAdder(a=a[6], b=b[6], c=carry6, sum=out[6], carry=carry7);
-        FullAdder(a=a[7], b=b[7], c=carry7, sum=out[7], carry=carry8);
-        FullAdder(a=a[8], b=b[8], c=carry8, sum=out[8], carry=carry9);
-        FullAdder(a=a[9], b=b[9], c=carry9, sum=out[9], carry=carry10);
-        FullAdder(a=a[10], b=b[10], c=carry10, sum=out[10], carry=carry11);
-        FullAdder(a=a[11], b=b[11], c=carry11, sum=out[11], carry=carry12);
-        FullAdder(a=a[12], b=b[12], c=carry12, sum=out[12], carry=carry13);
-        FullAdder(a=a[13], b=b[13], c=carry13, sum=out[13], carry=carry14);
-        FullAdder(a=a[14], b=b[14], c=carry14, sum=out[14], carry=carry15);
-        FullAdder(a=a[15], b=b[15], c=carry15, sum=out[15], carry=carry16);
+        HalfAdder(a=a[0], b=b[0], sum=out[0], carry=carry0);
+        FullAdder(a=a[1], b=b[1], c=carry0, sum=out[1], carry=carry1);
+        FullAdder(a=a[2], b=b[2], c=carry1, sum=out[2], carry=carry2);
+        FullAdder(a=a[3], b=b[3], c=carry2, sum=out[3], carry=carry3);
+        FullAdder(a=a[4], b=b[4], c=carry3, sum=out[4], carry=carry4);
+        FullAdder(a=a[5], b=b[5], c=carry4, sum=out[5], carry=carry5);
+        FullAdder(a=a[6], b=b[6], c=carry5, sum=out[6], carry=carry6);
+        FullAdder(a=a[7], b=b[7], c=carry6, sum=out[7], carry=carry7);
+        FullAdder(a=a[8], b=b[8], c=carry7, sum=out[8], carry=carry8);
+        FullAdder(a=a[9], b=b[9], c=carry8, sum=out[9], carry=carry9);
+        FullAdder(a=a[10], b=b[10], c=carry9, sum=out[10], carry=carry10);
+        FullAdder(a=a[11], b=b[11], c=carry10, sum=out[11], carry=carry11);
+        FullAdder(a=a[12], b=b[12], c=carry11, sum=out[12], carry=carry12);
+        FullAdder(a=a[13], b=b[13], c=carry12, sum=out[13], carry=carry13);
+        FullAdder(a=a[14], b=b[14], c=carry13, sum=out[14], carry=carry14);
+        FullAdder(a=a[15], b=b[15], c=carry14, sum=out[15], carry=carry15); // carry15 goes nowhere
     }
     """
     def calculate(self):
-        _sum = ["0"] * 16
-        carry = ["0"] * 17
-        carry[0], _sum[0] = HalfAdder().evaluate(a="0b"+self.a16[-16], b="0b"+self.b16[-16])
-        for i in reversed(range(1, 16)):
+        _sum = ["X"] * 16
+        carry = ["X"] * 16
+        carry[-1], _sum[-1] = HalfAdder().evaluate(a="0b"+self.a16[-1], b="0b"+self.b16[-1])
+        for i in range(2, 17):  # -2 to -16
             i = i * -1
-            carry[i-1], _sum[i] = FullAdder().evaluate(a="0b"+self.a16[i], b="0b"+self.b16[i], c="0b"+carry[i])
+            carry[i], _sum[i] = FullAdder().evaluate(a="0b"+self.a16[i], b="0b"+self.b16[i], c=carry[i+1])
 
         _sum_result = "0b"
         for bit in _sum:
@@ -681,6 +685,42 @@ class ALU(Gate):
     Not(in=zrOr, out=zr);
     }
     """
+    def __init__(self):
+        super().__init__()
+        # output flags only, not checked in evaluate()
+        self.zr = None
+        self.ng = None
+
+    def calculate(self):
+        # zx/zy (1=zero input)
+        x_z = Mux16().evaluate(a16=self.x, b16="0b0000000000000000", sel=self.zx)
+        y_z = Mux16().evaluate(a16=self.y, b16="0b0000000000000000", sel=self.zy)
+
+        # nx/ny (1=not input)
+        x_n = Not16Gate().evaluate(_in16=x_z)
+        y_n = Not16Gate().evaluate(_in16=y_z)
+        x_zn = Mux16().evaluate(a16=x_z, b16=x_n, sel=self.nx)
+        y_zn = Mux16().evaluate(a16=y_z, b16=y_n, sel=self.ny)
+
+        # (0=and, 1=add)
+        xy_zn_add = Add16().evaluate(a16=x_zn, b16=y_zn)
+        xy_zn_and = And16Gate().evaluate(a16=x_zn, b16=y_zn)
+        xy_znf = Mux16().evaluate(a16=xy_zn_and, b16=xy_zn_add, sel=self.f)
+
+        # no (1=not) // ng = MSB
+        xy_znf_not = Not16Gate().evaluate(_in16=xy_znf)
+        result = Mux16().evaluate(a16=xy_znf, b16=xy_znf_not, sel=self.no)
+        self.ng = "0b" + result[-16]
+
+        # zr (1 = result==0) // endianness doesn't matter in this instance
+        result_1 = result[-16:-8]  # out[0..7]=xyZNFN1
+        result_2 = result[-8:]  # out[8..15]=xyZNFN2
+        or8_1 = Or8Way().evaluate(_in8=result_1)
+        or8_2 = Or8Way().evaluate(_in8=result_2)
+        zr_or = OrGate().evaluate(a=or8_1, b=or8_2)
+        self.zr = NotGate().evaluate(_in=zr_or)
+
+        return result, self.zr, self.ng
 
 
 def input_unit_test():
@@ -762,6 +802,7 @@ def main():
     _fullAdder = FullAdder()
     _add16 = Add16()
     _inc16 = Inc16()
+    _alu = ALU()
     input_unit_test()
 
     # For two 1 inputs return a 1 output, else return a 1 output
@@ -771,13 +812,13 @@ def main():
     assert _nand.evaluate(a="0b0", b="0b0") == "0b1"
 
     # For a single input, return the opposite
-    assert _not.evaluate(a="0b1") == "0b0"
-    assert _not.evaluate(a="0b0") == "0b1"
+    assert _not.evaluate(_in="0b1") == "0b0"
+    assert _not.evaluate(_in="0b0") == "0b1"
 
     # NotGate but with two x 16 bit inputs and one 16 bit output, each bit is compared across both inputs
-    assert _not16.evaluate(a16="0b0000000000000000") == "0b1111111111111111"
-    assert _not16.evaluate(a16="0b1111111111111111") == "0b0000000000000000"
-    assert _not16.evaluate(a16="0b0000001111000000") == "0b1111110000111111"
+    assert _not16.evaluate(_in16="0b0000000000000000") == "0b1111111111111111"
+    assert _not16.evaluate(_in16="0b1111111111111111") == "0b0000000000000000"
+    assert _not16.evaluate(_in16="0b0000001111000000") == "0b1111110000111111"
 
     # For two 1 inputs return a 1 output, else return a 0 output
     assert _and.evaluate(a="0b1", b="0b1") == "0b1"
@@ -906,6 +947,8 @@ def main():
 
     # Adds two 16-bit values and output 16 bit result, the most significant carry bit is ignored
     assert _add16.evaluate(a16="0b0000000000000000", b16="0b0000000000000000") == "0b0000000000000000"
+    assert _add16.evaluate(a16="0b0000000000000001", b16="0b0000000000000001") == "0b0000000000000010"
+    assert _add16.evaluate(a16="0b0000000000000001", b16="0b0000000000001111") == "0b0000000000010000"
     assert _add16.evaluate(a16="0b1111111111111110", b16="0b0000000000000001") == "0b1111111111111111"
     assert _add16.evaluate(a16="0b1111111100000000", b16="0b0000000000000000") == "0b1111111100000000"
     assert _add16.evaluate(a16="0b0000000011111111", b16="0b0000000000000000") == "0b0000000011111111"
@@ -914,7 +957,35 @@ def main():
 
     # Increment a 16 bit number
     assert _inc16.evaluate(a16="0b0000000000000000") == "0b0000000000000001"
+    assert _inc16.evaluate(a16="0b0000000000000010") == "0b0000000000000011"
+    assert _inc16.evaluate(a16="0b0000000000000011") == "0b0000000000000100"
     assert _inc16.evaluate(a16="0b1111111111111110") == "0b1111111111111111"
+
+    """
+    ALU (Arithmetic Logic Unit) Computes one of the following functions:
+    // if (zx == 1) set x = 0        // 16-bit constant
+    // if (nx == 1) set x = !x       // bitwise not
+    // if (zy == 1) set y = 0        // 16-bit constant
+    // if (ny == 1) set y = !y       // bitwise not
+    // if (f == 1)  set out = x + y  // integer 2's complement addition
+    // if (f == 0)  set out = x & y  // bitwise and
+    // if (no == 1) set out = !out   // bitwise not
+    // if (out == 0) set zr = 1
+    // if (out < 0) set ng = 1
+
+    CHIP ALU {
+    IN
+        x[16], y[16],  // 16-bit inputs
+        zx, nx, zy, ny, f, no; // 1 bit flags
+
+    OUT
+        out[16], // 16-bit output
+        zr, ng; // 1 bit flags
+    """
+    # zx/zy
+    # print(_alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") )
+    # assert _alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000010", "0b0", "0b0")
+    # assert _alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000001", "0b0", "0b0")
 
 
 if __name__ == "__main__":
