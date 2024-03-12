@@ -10,6 +10,7 @@ p = -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -12 -13 -14 -15 -16
 
 """
 
+from datetime import datetime
 
 # TODO: reduce multiple instantiations of classes where not required
 # TODO: disable eval code
@@ -2858,43 +2859,63 @@ def main(test_all=False, debug=False):
             "0b1110001101100000",  # A=!D
             "0b1110101010000111",  # 0;JMP
             '''
-            _asm_filepaths = [r'python_hdl\debug.hack']
+            _bin_filepaths = [r'python_hdl\debug.hack']
 
         else:
-            _asm_filepaths = [
-                r"nand2tetris\projects\04\fill\fill.hack",
-                r"nand2tetris\projects\04\mult\mult.hack",
+            _bin_filepaths = [
+                # r"..\nand2tetris\projects\04\fill\fill.hack",
+                # r"..\nand2tetris\projects\04\mult\mult.hack",
+                #
+                # r"..\nand2tetris\projects\06\add\add.hack",
+                # r"..\nand2tetris\projects\06\max\max.hack",
+                # r"..\nand2tetris\projects\06\max\maxL.hack",
+                # # r"..\nand2tetris\projects\06\pong\pong.hack",  # verified but slow
+                # # r"..\nand2tetris\projects\06\pong\pongL.hack",  # verified but slow
+                # r"..\nand2tetris\projects\06\rect\rect.hack",
+                # r"..\nand2tetris\projects\06\rect\rectL.hack",
+                #
+                # r"..\nand2tetris\projects\07\MemoryAccess\BasicTest\BasicTest.hack",
+                # r"..\nand2tetris\projects\07\MemoryAccess\PointerTest\PointerTest.hack",
+                # r"..\nand2tetris\projects\07\MemoryAccess\StaticTest\StaticTest.hack",
+                # r"..\nand2tetris\projects\07\StackArithmetic\SimpleAdd\SimpleAdd.hack",
+                # r"..\nand2tetris\projects\07\StackArithmetic\StackTest\StackTest.hack",
+                #
+                # r"..\nand2tetris\projects\08\FunctionCalls\FibonacciElement\FibonacciElement.hack",
+                # r"..\nand2tetris\projects\08\FunctionCalls\NestedCall\NestedCall.hack",
+                # r"..\nand2tetris\projects\08\FunctionCalls\SimpleFunction\SimpleFunction.hack",
+                # r"..\nand2tetris\projects\08\FunctionCalls\StaticsTest\StaticsTest.hack",
+                # r"..\nand2tetris\projects\08\ProgramFlow\BasicLoop\BasicLoop.hack",
+                # r"..\nand2tetris\projects\08\ProgramFlow\FibonacciSeries\FibonacciSeries.hack",
 
-                r"nand2tetris\projects\06\add\add.hack",
-                r"nand2tetris\projects\06\max\max.hack",
-                r"nand2tetris\projects\06\max\maxL.hack",
-                # r"nand2tetris\projects\06\pong\pong.hack",  # verified but slow
-                # r"nand2tetris\projects\06\pong\pongL.hack",  # verified but slow
-                r"nand2tetris\projects\06\rect\rect.hack",
-                r"nand2tetris\projects\06\rect\rectL.hack",
+                r"..\nand2tetris\projects\09\Average\Average.hack",
+                r"..\nand2tetris\projects\09\Fraction\Fraction.hack",
+                r"..\nand2tetris\projects\09\HelloWorld\HelloWorld.hack",
+                r"..\nand2tetris\projects\09\List\List.hack",
+                r"..\nand2tetris\projects\09\Square\Square.hack",
 
-                r"nand2tetris\projects\07\MemoryAccess\BasicTest\BasicTest.hack",
-                r"nand2tetris\projects\07\MemoryAccess\PointerTest\PointerTest.hack",
-                r"nand2tetris\projects\07\MemoryAccess\StaticTest\StaticTest.hack",
-                r"nand2tetris\projects\07\StackArithmetic\SimpleAdd\SimpleAdd.hack",
-                r"nand2tetris\projects\07\StackArithmetic\StackTest\StackTest.hack",
+                r"..\nand2tetris\projects\10\ArrayTest\ArrayTest.hack",
+                r"..\nand2tetris\projects\10\Square\Square.hack",
 
-                r"nand2tetris\projects\08\FunctionCalls\FibonacciElement\FibonacciElement.hack",
-                r"nand2tetris\projects\08\FunctionCalls\NestedCall\NestedCall.hack",
-                r"nand2tetris\projects\08\FunctionCalls\SimpleFunction\SimpleFunction.hack",
-                r"nand2tetris\projects\08\FunctionCalls\StaticsTest\StaticsTest.hack",
-                r"nand2tetris\projects\08\ProgramFlow\BasicLoop\BasicLoop.hack",
-                r"nand2tetris\projects\08\ProgramFlow\FibonacciSeries\FibonacciSeries.hack",
+                r"..\nand2tetris\projects\11\Average\Average.hack",
+                r"..\nand2tetris\projects\11\ConvertToBin\ConvertToBin.hack",
+                r"..\nand2tetris\projects\11\Seven\Seven.hack",
+                r"..\nand2tetris\projects\11\Square\Square.hack",
+
+                # r"..\nand2tetris\projects\10\ExpressionLessSquare\ExpressionLessSquare.hack",  # does not compile
+                # r"..\nand2tetris\projects\11\ComplexArrays\ComplexArrays.hack",  # too large
+                # r"..\nand2tetris\projects\11\Pong\Pong.hack",  # too large
             ]
 
-        for _asm_filepath in _asm_filepaths:
-            with open(_asm_filepath) as _asm_file:
+        for _bin_filepath in _bin_filepaths:
+            now = datetime.now()
+            current_time = now.strftime("%H:%M:%S")
+            with open(_bin_filepath) as _asm_file:
                 program = _asm_file.readlines()
 
             computer = Computer(name="computer_main", debug=debug)
-            print("%s: Loading ROM" % _asm_filepath)
+            print("%s %s: Loading ROM" % (current_time, _bin_filepath))
             computer.flash_rom(program)
-            print("%s: Running program" % _asm_filepath)
+            print("%s %s: Running program" % (current_time, _bin_filepath))
             for command in program:
                 computer.evaluate()
 
@@ -2903,13 +2924,13 @@ def main(test_all=False, debug=False):
 
 
 if __name__ == "__main__":
-    print("UNIT_TESTS: Initializing")
-    main(test_all=True, debug=False)
-    print("UNIT_TESTS: Complete!\n")
+    # print("UNIT_TESTS: Initializing")
+    # main(test_all=True, debug=False)
+    # print("UNIT_TESTS: Complete!\n")
 
-    print("COMPUTER_DEBUG: Initializing")
-    main(test_all=False, debug=True)
-    print("COMPUTER_DEBUG: Complete!\n")
+    # print("COMPUTER_DEBUG: Initializing")
+    # main(test_all=False, debug=True)
+    # print("COMPUTER_DEBUG: Complete!\n")
 
     print("COMPUTER_ALL: Initializing")
     main(test_all=False, debug=False)
