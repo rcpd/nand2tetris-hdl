@@ -10,6 +10,7 @@ p = -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -12 -13 -14 -15 -16
 
 """
 
+
 # TODO: reduce multiple instantiations of classes where not required
 # TODO: disable eval code
 
@@ -54,9 +55,9 @@ class Gate(object):
         self.addr14 = None
         self.addr15 = None
 
-    def evaluate(self, a=None, b=None, c=None, _in=None, _in3=None, sel=None, sel2=None, sel3=None, _in8=None, 
-                 _in16=None, a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None, x=None, 
-                 y=None, zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None, 
+    def evaluate(self, a=None, b=None, c=None, _in=None, _in3=None, sel=None, sel2=None, sel3=None, _in8=None,
+                 _in16=None, a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None, x=None,
+                 y=None, zx=None, nx=None, zy=None, ny=None, f=None, no=None, load=None, inc=None, reset=None,
                  addr3=None, addr6=None, addr9=None, addr12=None, addr13=None, addr14=None, addr15=None):
         """
         validate input, None = uninitialized
@@ -81,7 +82,7 @@ class Gate(object):
                     sixteen_bit_inputs[flag] = bin(sixteen_bit_inputs[flag])
                 if int(sixteen_bit_inputs[flag], 2) < 0 or int(sixteen_bit_inputs[flag], 2) > 65535:
                     raise RuntimeError("%s input must be 16 bits (value was %s)" % (flag, sixteen_bit_inputs[flag]))
-                
+
         # set inputs (either valid or None, not worth retesting for None)
         self.a = a
         self.b = b
@@ -108,28 +109,28 @@ class Gate(object):
         self.load = load
         self.inc = inc
         self.reset = reset
-        
+
         if sel2 is not None:
             if type(sel2) is not str:
                 sel2 = bin(sel2)
             if sel2 not in ("0b00", "0b01", "0b10", "0b11"):
                 raise RuntimeError("sel2 input must be 2 bits")
             self.sel2 = sel2
-        
+
         if sel3 is not None:
             if type(sel3) is not str:
                 sel3 = bin(sel3)
             if int(sel3, 2) < 0 or int(sel3, 2) > 7:
                 raise RuntimeError("sel3 input must be 3 bits")
             self.sel3 = sel3
-        
+
         if _in3 is not None:
             if type(_in3) is not str:
                 _in3 = bin(_in3)
             if int(_in3, 2) < 0 or int(_in3, 2) > 7:
                 raise RuntimeError("_in3 input must be 3 bits")
             self._in3 = _in3
-        
+
         if addr3 is not None:
             if type(addr3) is not str:
                 addr3 = bin(addr3)
@@ -143,49 +144,49 @@ class Gate(object):
             if int(addr6, 2) < 0 or int(addr6, 2) > 77:
                 raise RuntimeError("addr6 input must be 6 bits")
             self.addr6 = addr6
-        
+
         if addr9 is not None:
             if type(addr9) is not str:
                 addr9 = bin(addr9)
             if int(addr9, 2) < 0 or int(addr9, 2) > 777:
                 raise RuntimeError("addr9 input must be 9 bits")
             self.addr9 = addr9
-        
+
         if addr12 is not None:
             if type(addr12) is not str:
                 addr12 = bin(addr12)
             if int(addr12, 2) < 0 or int(addr12, 2) > 4095:
                 raise RuntimeError("addr12 input must be 12 bits")
-            self.addr12 = addr12   
-        
+            self.addr12 = addr12
+
         if addr13 is not None:
             if type(addr13) is not str:
                 addr13 = bin(addr13)
             if int(addr13, 2) < 0 or int(addr13, 2) > 8191:
                 raise RuntimeError("addr13 input must be 12 bits")
-            self.addr13 = addr13   
-        
+            self.addr13 = addr13
+
         if addr14 is not None:
             if type(addr14) is not str:
                 addr14 = bin(addr14)
             if int(addr14, 2) < 0 or int(addr14, 2) > 16383:
                 raise RuntimeError("addr14 input must be 14 bits")
-            self.addr14 = addr14  
-        
+            self.addr14 = addr14
+
         if addr15 is not None:
             if type(addr15) is not str:
                 addr15 = bin(addr15)
             if int(addr15, 2) < 0 or int(addr15, 2) > 32767:
                 raise RuntimeError("addr15 input must be 14 bits")
-            self.addr15 = addr15  
-        
+            self.addr15 = addr15
+
         if _in8 is not None:
             if type(_in8) is not str:
                 _in8 = bin(_in8)
             if int(_in8, 2) < 0 or int(_in8, 2) > 255:
                 raise RuntimeError("_in8 input must be 8 bits")
             self._in8 = _in8
-            
+
         # run gate specific logic
         return self.calculate()
 
@@ -197,6 +198,7 @@ class NandGate(Gate):
     """
     For two 1 inputs return a 0 output, else return a 1 output
     """
+
     def calculate(self):
         # cast to int from binary string for comparison
         # endianness does not matter as only 1 bit returned
@@ -218,6 +220,7 @@ class NotGate(Gate):
         Nand(a=in, b=in, out=out);
     }
     """
+
     def calculate(self):
         """
         A single input/output can still have a one-to-many relationship with other gates
@@ -253,13 +256,14 @@ class Not16Gate(Gate):
         Not(in=in[15], out=out[15]);
     }
     """
+
     def calculate(self):
         byte_str = "0b"
         # will return an LSB endianness result which is then reversed to MSB for Python
         # HACK = LSB = 0000000000000001
         # PYBS = MSB = 1000000000000000
         for i in reversed(range(1, 17)):
-            byte_str += NotGate().evaluate(_in="0b"+self._in16[i*-1])[2:]
+            byte_str += NotGate().evaluate(_in="0b" + self._in16[i * -1])[2:]
         return byte_str
 
 
@@ -276,6 +280,7 @@ class AndGate(Gate):
         Nand(a=aNand, b=aNand, out=out);
     }
     """
+
     def calculate(self):
         """
         Now we can combine a NAND with a NOT to get a regular AND gate
@@ -298,13 +303,14 @@ class And16Gate(Gate):
         Nand(a=aNand, b=aNand, out=out);
     }
     """
+
     def calculate(self):
         byte_str = "0b"
         # will return an LSB endianness result which is then reversed to MSB for Python
         # HACK = LSB = 0000000000000001
         # PYBS = MSB = 1000000000000000
         for i in reversed(range(1, 17)):
-            byte_str += AndGate().evaluate(a="0b"+self.a16[i*-1], b="0b"+self.b16[i*-1])[2:]
+            byte_str += AndGate().evaluate(a="0b" + self.a16[i * -1], b="0b" + self.b16[i * -1])[2:]
         return byte_str
 
 
@@ -322,6 +328,7 @@ class OrGate(Gate):
         Nand(a=aNand, b=bNand, out=out);
     }
     """
+
     def calculate(self):
         # endianness does not matter as only 1 bit returned
         nand_a = NandGate().evaluate(a=self.a, b=self.a)
@@ -356,13 +363,14 @@ class Or16Gate(Gate):
         Or(a=a[15], b=b[15], out=out[15]);
     }
     """
+
     def calculate(self):
         byte_str = "0b"
         # will return an LSB endianness result which is then reversed to MSB for Python
         # HACK = LSB = 0000000000000001
         # PYBS = MSB = 1000000000000000
         for i in reversed(range(1, 17)):
-            byte_str += OrGate().evaluate(a="0b"+self.a16[i*-1], b="0b"+self.b16[i*-1])[2:]
+            byte_str += OrGate().evaluate(a="0b" + self.a16[i * -1], b="0b" + self.b16[i * -1])[2:]
         return byte_str
 
 
@@ -384,12 +392,13 @@ class Or8Way(Gate):
         Or(a=or5, b=or6, out=out);
     }
     """
+
     def calculate(self):
         # endianness does not matter as only 1 bit returned
-        or0 = OrGate().evaluate(a="0b"+self._in8[-1], b="0b"+self._in8[-2])
-        or1 = OrGate().evaluate(a="0b"+self._in8[-3], b="0b"+self._in8[-4])
-        or2 = OrGate().evaluate(a="0b"+self._in8[-5], b="0b"+self._in8[-6])
-        or3 = OrGate().evaluate(a="0b"+self._in8[-7], b="0b"+self._in8[-8])
+        or0 = OrGate().evaluate(a="0b" + self._in8[-1], b="0b" + self._in8[-2])
+        or1 = OrGate().evaluate(a="0b" + self._in8[-3], b="0b" + self._in8[-4])
+        or2 = OrGate().evaluate(a="0b" + self._in8[-5], b="0b" + self._in8[-6])
+        or3 = OrGate().evaluate(a="0b" + self._in8[-7], b="0b" + self._in8[-8])
 
         or4 = OrGate().evaluate(a=or0, b=or1)
         or5 = OrGate().evaluate(a=or2, b=or3)
@@ -412,6 +421,7 @@ class XorGate(Gate):
         Nand(a=bNand, b=cNand, out=out);
     }
     """
+
     def calculate(self):
         # endianness does not matter as only 1 bit returned
         nand_a = NandGate().evaluate(a=self.a, b=self.b)
@@ -432,6 +442,7 @@ class NorGate(Gate):
         Not(in=orOut,out=out);
     }
     """
+
     def calculate(self):
         # endianness does not matter as only 1 bit returned
         _or = OrGate().evaluate(a=self.a, b=self.b)
@@ -450,6 +461,7 @@ class XNorGate(Gate):
         Not(in=xorOut,out=out);
     }
     """
+
     def calculate(self):
         # endianness does not matter as only 1 bit returned
         _xor = XorGate().evaluate(a=self.a, b=self.b)
@@ -471,6 +483,7 @@ class Mux(Gate):
         Nand(a=bNand, b=cNand, out=out);
     }
     """
+
     def calculate(self):
         # endianness does not matter as only 1 bit returned
         nand_a = NandGate().evaluate(a=self.sel, b=self.sel)
@@ -506,13 +519,14 @@ class Mux16(Gate):
         Mux(a=a[15], b=b[15], sel=sel, out=out[15]);
     }
     """
+
     def calculate(self):
         byte_str = "0b"
         # will return an LSB endianness result which is then reversed to MSB for Python
         # HACK = LSB = 0000000000000001
         # PYBS = MSB = 1000000000000000
         for i in reversed(range(1, 17)):
-            byte_str += Mux().evaluate(a="0b"+self.a16[i*-1], b="0b"+self.b16[i*-1], sel=self.sel)[2:]
+            byte_str += Mux().evaluate(a="0b" + self.a16[i * -1], b="0b" + self.b16[i * -1], sel=self.sel)[2:]
         return byte_str
 
 
@@ -530,11 +544,12 @@ class Mux4Way16(Gate):
         Mux16(a=muxAB, b=muxCD, sel=sel[1], out=out);
     }
     """
+
     def calculate(self):
         # endianness only matters for selector / result order
-        mux16_ab = Mux16().evaluate(a16=self.a16, b16=self.b16, sel="0b"+self.sel2[-1])
-        mux16_cd = Mux16().evaluate(a16=self.c16, b16=self.d16, sel="0b"+self.sel2[-1])
-        return Mux16().evaluate(a16=mux16_ab, b16=mux16_cd, sel="0b"+self.sel2[-2])
+        mux16_ab = Mux16().evaluate(a16=self.a16, b16=self.b16, sel="0b" + self.sel2[-1])
+        mux16_cd = Mux16().evaluate(a16=self.c16, b16=self.d16, sel="0b" + self.sel2[-1])
+        return Mux16().evaluate(a16=mux16_ab, b16=mux16_cd, sel="0b" + self.sel2[-2])
 
 
 class Mux8Way16(Gate):
@@ -553,13 +568,14 @@ class Mux8Way16(Gate):
         Mux16(a=muxAD, b=muxEH, sel=sel[2], out=out);
     }
     """
+
     def calculate(self):
         # endianness only matters for selector / result order
         mux4way16_ad = Mux4Way16().evaluate(a16=self.a16, b16=self.b16, c16=self.c16, d16=self.d16,
-                                            sel2="0b"+self.sel3[-2]+self.sel3[-1])
+                                            sel2="0b" + self.sel3[-2] + self.sel3[-1])
         mux4way16_eh = Mux4Way16().evaluate(a16=self.e16, b16=self.f16, c16=self.g16, d16=self.h16,
-                                            sel2="0b"+self.sel3[-2]+self.sel3[-1])
-        return Mux16().evaluate(a16=mux4way16_ad, b16=mux4way16_eh, sel="0b"+self.sel3[-3])
+                                            sel2="0b" + self.sel3[-2] + self.sel3[-1])
+        return Mux16().evaluate(a16=mux4way16_ad, b16=mux4way16_eh, sel="0b" + self.sel3[-3])
 
 
 class DMux(Gate):
@@ -578,6 +594,7 @@ class DMux(Gate):
         Nand(a=cNand, b=cNand, out=b);
     }
     """
+
     def calculate(self):
         # endianness does not matter as only 2 x 1 bit returned?
         nand_a = NandGate().evaluate(a=self.sel, b=self.sel)
@@ -600,11 +617,12 @@ class DMux4Way(Gate):
         DMux(in=dIn1, sel=sel[0], a=c, b=d);
     }
     """
+
     def calculate(self):
         # endianness only matters for selector / result order
-        dmux_0_a, dmux_0_b = DMux().evaluate(_in=self._in, sel="0b"+self.sel2[-2])
-        dmux_1_a, dmux_1_b = DMux().evaluate(_in=dmux_0_a, sel="0b"+self.sel2[-1])
-        dmux_2_a, dmux_2_b = DMux().evaluate(_in=dmux_0_b, sel="0b"+self.sel2[-1])
+        dmux_0_a, dmux_0_b = DMux().evaluate(_in=self._in, sel="0b" + self.sel2[-2])
+        dmux_1_a, dmux_1_b = DMux().evaluate(_in=dmux_0_a, sel="0b" + self.sel2[-1])
+        dmux_2_a, dmux_2_b = DMux().evaluate(_in=dmux_0_b, sel="0b" + self.sel2[-1])
         return dmux_1_a, dmux_1_b, dmux_2_a, dmux_2_b
 
 
@@ -622,11 +640,12 @@ class DMux8Way(Gate):
         DMux4Way(in=dIn1, sel=sel[0..1], a=e, b=f, c=g, d=h);
     }
     """
+
     def calculate(self):
         # endianness only matters for selector / result order
-        dmux_a, dmux_b = DMux().evaluate(_in=self._in, sel="0b"+self.sel3[-3])
-        dmux4_0 = DMux4Way().evaluate(_in=dmux_a, sel2="0b"+self.sel3[-2]+self.sel3[-1])
-        dmux4_1 = DMux4Way().evaluate(_in=dmux_b, sel2="0b"+self.sel3[-2]+self.sel3[-1])
+        dmux_a, dmux_b = DMux().evaluate(_in=self._in, sel="0b" + self.sel3[-3])
+        dmux4_0 = DMux4Way().evaluate(_in=dmux_a, sel2="0b" + self.sel3[-2] + self.sel3[-1])
+        dmux4_1 = DMux4Way().evaluate(_in=dmux_b, sel2="0b" + self.sel3[-2] + self.sel3[-1])
         return dmux4_0 + dmux4_1
 
 
@@ -644,6 +663,7 @@ class HalfAdder(Gate):
         And(a=a, b=b, out=carry);
     }
     """
+
     def calculate(self):
         carry = AndGate().evaluate(a=self.a, b=self.b)
         _sum = XorGate().evaluate(a=self.a, b=self.b)
@@ -665,6 +685,7 @@ class FullAdder(Gate):
         Or(a=carryABC, b=carryAB, out=carry);
     }
     """
+
     def calculate(self):
         carry_ab, sum_ab = HalfAdder().evaluate(a=self.a, b=self.b)
         carry_abc, _sum = HalfAdder().evaluate(a=self.c, b=sum_ab)
@@ -699,13 +720,14 @@ class Add16(Gate):
         FullAdder(a=a[15], b=b[15], c=carry14, sum=out[15], carry=carry15); // carry15 goes nowhere
     }
     """
+
     def calculate(self):
         _sum = ["X"] * 16
         carry = ["X"] * 16
-        carry[-1], _sum[-1] = HalfAdder().evaluate(a="0b"+self.a16[-1], b="0b"+self.b16[-1])
+        carry[-1], _sum[-1] = HalfAdder().evaluate(a="0b" + self.a16[-1], b="0b" + self.b16[-1])
         for i in range(2, 17):  # -2 to -16
             i = i * -1
-            carry[i], _sum[i] = FullAdder().evaluate(a="0b"+self.a16[i], b="0b"+self.b16[i], c=carry[i+1])
+            carry[i], _sum[i] = FullAdder().evaluate(a="0b" + self.a16[i], b="0b" + self.b16[i], c=carry[i + 1])
 
         _sum_result = "0b"
         for bit in _sum:
@@ -726,6 +748,7 @@ class Inc16(Gate):
         Add16(a=in, b[0]=true, b[1..15]=false, out=out);
     }
     """
+
     def calculate(self):
         return Add16().evaluate(a16=self._in16, b16="0b0000000000000001")
 
@@ -783,6 +806,7 @@ class ALU(Gate):
         Not(in=zrOr, out=zr);
     }
     """
+
     def __init__(self):
         super().__init__()
         # output flags only, not checked in evaluate()
@@ -828,6 +852,7 @@ class DFF(Gate):
     // No HDL, implemented in Java on the course
     // DFF(in=Mout,out=Dout,out=out);
     """
+
     def __init__(self):
         super().__init__()
         self.r_nor = "0b0"  # Q = in if load
@@ -865,6 +890,7 @@ class Bit(Gate):
         DFF(in=Mout,out=Dout,out=out);
     }
     """
+
     def __init__(self):
         super().__init__()
         self.dff = DFF()
@@ -903,6 +929,7 @@ class Register(Gate):
         Bit(in=in[15], load=load, out=out[15]);
     }
     """
+
     def __init__(self, name=None):
         super().__init__()
         self.bit0 = Bit()
@@ -927,22 +954,22 @@ class Register(Gate):
     def calculate(self):
         # can't use range as Register has to save state
         # print("\ninputs:", self.name, self._in16, self.load, self.addr6)
-        self.bit0.evaluate(_in="0b"+self._in16[2], load=self.load)
-        self.bit1.evaluate(_in="0b"+self._in16[3], load=self.load)
-        self.bit2.evaluate(_in="0b"+self._in16[4], load=self.load)
-        self.bit3.evaluate(_in="0b"+self._in16[5], load=self.load)
-        self.bit4.evaluate(_in="0b"+self._in16[6], load=self.load)
-        self.bit5.evaluate(_in="0b"+self._in16[7], load=self.load)
-        self.bit6.evaluate(_in="0b"+self._in16[8], load=self.load)
-        self.bit7.evaluate(_in="0b"+self._in16[9], load=self.load)
-        self.bit8.evaluate(_in="0b"+self._in16[10], load=self.load)
-        self.bit9.evaluate(_in="0b"+self._in16[11], load=self.load)
-        self.bit10.evaluate(_in="0b"+self._in16[12], load=self.load)
-        self.bit11.evaluate(_in="0b"+self._in16[13], load=self.load)
-        self.bit12.evaluate(_in="0b"+self._in16[14], load=self.load)
-        self.bit13.evaluate(_in="0b"+self._in16[15], load=self.load)
-        self.bit14.evaluate(_in="0b"+self._in16[16], load=self.load)
-        self.bit15.evaluate(_in="0b"+self._in16[17], load=self.load)
+        self.bit0.evaluate(_in="0b" + self._in16[2], load=self.load)
+        self.bit1.evaluate(_in="0b" + self._in16[3], load=self.load)
+        self.bit2.evaluate(_in="0b" + self._in16[4], load=self.load)
+        self.bit3.evaluate(_in="0b" + self._in16[5], load=self.load)
+        self.bit4.evaluate(_in="0b" + self._in16[6], load=self.load)
+        self.bit5.evaluate(_in="0b" + self._in16[7], load=self.load)
+        self.bit6.evaluate(_in="0b" + self._in16[8], load=self.load)
+        self.bit7.evaluate(_in="0b" + self._in16[9], load=self.load)
+        self.bit8.evaluate(_in="0b" + self._in16[10], load=self.load)
+        self.bit9.evaluate(_in="0b" + self._in16[11], load=self.load)
+        self.bit10.evaluate(_in="0b" + self._in16[12], load=self.load)
+        self.bit11.evaluate(_in="0b" + self._in16[13], load=self.load)
+        self.bit12.evaluate(_in="0b" + self._in16[14], load=self.load)
+        self.bit13.evaluate(_in="0b" + self._in16[15], load=self.load)
+        self.bit14.evaluate(_in="0b" + self._in16[16], load=self.load)
+        self.bit15.evaluate(_in="0b" + self._in16[17], load=self.load)
         self.d_out = "0b" + self.bit0.d_out[2:] + self.bit1.d_out[2:] + self.bit2.d_out[2:] + self.bit3.d_out[2:] \
                      + self.bit4.d_out[2:] + self.bit5.d_out[2:] + self.bit6.d_out[2:] + self.bit7.d_out[2:] \
                      + self.bit8.d_out[2:] + self.bit9.d_out[2:] + self.bit10.d_out[2:] + self.bit11.d_out[2:] \
@@ -972,6 +999,7 @@ class PC(Gate):
         Register(in=cout, load=true, out=out, out=feedback);
     }
     """
+
     def __init__(self):
         super().__init__()
         self.feedback = "0b0000000000000000"
@@ -1008,6 +1036,7 @@ class RAM8(Gate):
         Mux8Way16(a=r0Out, b=r1Out, c=r2Out, d=r3Out, e=r4Out, f=r5Out, g=r6Out, h=r7Out, sel=address, out=out);
     }
     """
+
     def __init__(self, name=None):
         super().__init__()
         self.name = name
@@ -1050,7 +1079,7 @@ class RAM8(Gate):
         elif self.addr3 == "0b111":
             self.r7_out = self.r7.evaluate(_in16=self._in16, load=dmux8w[7])
         else:
-            raise RuntimeError("Bad case in RAM8: %s" % "0b"+self.addr3)
+            raise RuntimeError("Bad case in RAM8: %s" % "0b" + self.addr3)
 
         self.d_out = Mux8Way16().evaluate(a16=self.r0_out, b16=self.r1_out, c16=self.r2_out, d16=self.r3_out,
                                           e16=self.r4_out, f16=self.r5_out, g16=self.r6_out, h16=self.r7_out,
@@ -1082,6 +1111,7 @@ class RAM64(Gate):
         Mux8Way16(a=r0Out, b=r1Out, c=r2Out, d=r3Out, e=r4Out, f=r5Out, g=r6Out, h=r7Out, sel=address[0..2], out=out);
     }
     """
+
     def __init__(self, name=None):
         super().__init__()
         self.name = name
@@ -1107,32 +1137,32 @@ class RAM64(Gate):
         # 3 MSB = RAM8 block, 3 LSB = Register
         # only evaluate selected RAM8 block (python performance optimisation)
         # print("\ninputs:", self.name, self._in16, self.load, self.addr6)
-        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr6[-6:-3])
-        if "0b"+self.addr6[-6:-3] == "0b000":
-            self.ram8_0_out = self.ram8_0.evaluate(_in16=self._in16, load=dmux8w[0], addr3="0b"+self.addr6[-3:])
-        elif "0b"+self.addr6[-6:-3] == "0b001":
-            self.ram8_1_out = self.ram8_1.evaluate(_in16=self._in16, load=dmux8w[1], addr3="0b"+self.addr6[-3:])
-        elif "0b"+self.addr6[-6:-3] == "0b010":
-            self.ram8_2_out = self.ram8_2.evaluate(_in16=self._in16, load=dmux8w[2], addr3="0b"+self.addr6[-3:])
-        elif "0b"+self.addr6[-6:-3] == "0b011":
-            self.ram8_3_out = self.ram8_3.evaluate(_in16=self._in16, load=dmux8w[3], addr3="0b"+self.addr6[-3:])
-        elif "0b"+self.addr6[-6:-3] == "0b100":
-            self.ram8_4_out = self.ram8_4.evaluate(_in16=self._in16, load=dmux8w[4], addr3="0b"+self.addr6[-3:])
-        elif "0b"+self.addr6[-6:-3] == "0b101":
-            self.ram8_5_out = self.ram8_5.evaluate(_in16=self._in16, load=dmux8w[5], addr3="0b"+self.addr6[-3:])
-        elif "0b"+self.addr6[-6:-3] == "0b110":
-            self.ram8_6_out = self.ram8_6.evaluate(_in16=self._in16, load=dmux8w[6], addr3="0b"+self.addr6[-3:])
-        elif "0b"+self.addr6[-6:-3] == "0b111":
-            self.ram8_7_out = self.ram8_7.evaluate(_in16=self._in16, load=dmux8w[7], addr3="0b"+self.addr6[-3:])
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b" + self.addr6[-6:-3])
+        if "0b" + self.addr6[-6:-3] == "0b000":
+            self.ram8_0_out = self.ram8_0.evaluate(_in16=self._in16, load=dmux8w[0], addr3="0b" + self.addr6[-3:])
+        elif "0b" + self.addr6[-6:-3] == "0b001":
+            self.ram8_1_out = self.ram8_1.evaluate(_in16=self._in16, load=dmux8w[1], addr3="0b" + self.addr6[-3:])
+        elif "0b" + self.addr6[-6:-3] == "0b010":
+            self.ram8_2_out = self.ram8_2.evaluate(_in16=self._in16, load=dmux8w[2], addr3="0b" + self.addr6[-3:])
+        elif "0b" + self.addr6[-6:-3] == "0b011":
+            self.ram8_3_out = self.ram8_3.evaluate(_in16=self._in16, load=dmux8w[3], addr3="0b" + self.addr6[-3:])
+        elif "0b" + self.addr6[-6:-3] == "0b100":
+            self.ram8_4_out = self.ram8_4.evaluate(_in16=self._in16, load=dmux8w[4], addr3="0b" + self.addr6[-3:])
+        elif "0b" + self.addr6[-6:-3] == "0b101":
+            self.ram8_5_out = self.ram8_5.evaluate(_in16=self._in16, load=dmux8w[5], addr3="0b" + self.addr6[-3:])
+        elif "0b" + self.addr6[-6:-3] == "0b110":
+            self.ram8_6_out = self.ram8_6.evaluate(_in16=self._in16, load=dmux8w[6], addr3="0b" + self.addr6[-3:])
+        elif "0b" + self.addr6[-6:-3] == "0b111":
+            self.ram8_7_out = self.ram8_7.evaluate(_in16=self._in16, load=dmux8w[7], addr3="0b" + self.addr6[-3:])
         else:
-            raise RuntimeError("Bad case in RAM64: %s" % "0b"+self.addr6[-6:-3])
+            raise RuntimeError("Bad case in RAM64: %s" % "0b" + self.addr6[-6:-3])
 
         # print("outputs:", self.ram8_0_out, self.ram8_1_out, self.ram8_2_out, self.ram8_3_out, self.ram8_4_out,
         #       self.ram8_5_out, self.ram8_6_out, self.ram8_7_out)
 
         self.ram8_d_out = Mux8Way16().evaluate(
             a16=self.ram8_0_out, b16=self.ram8_1_out, c16=self.ram8_2_out, d16=self.ram8_3_out, e16=self.ram8_4_out,
-            f16=self.ram8_5_out, g16=self.ram8_6_out, h16=self.ram8_7_out, sel3="0b"+self.addr6[-6:-3])
+            f16=self.ram8_5_out, g16=self.ram8_6_out, h16=self.ram8_7_out, sel3="0b" + self.addr6[-6:-3])
 
         # print("result:", self.ram8_d_out)
         return self.ram8_d_out
@@ -1161,6 +1191,7 @@ class RAM512(Gate):
         Mux8Way16(a=r0out, b=r1out, c=r2out, d=r3out, e=r4out, f=r5out, g=r6out, h=r7out, sel=address[0..2], out=out);
     }
     """
+
     def __init__(self, name=None):
         super().__init__()
         self.name = name
@@ -1188,25 +1219,25 @@ class RAM512(Gate):
 
         # print("\ninputs:", self.name, self._in16, self.load, self.addr9)
 
-        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr9[-9:-6])
-        if "0b"+self.addr9[-9:-6] == "0b000":
-            self.ram64_0_out = self.ram64_0.evaluate(_in16=self._in16, load=dmux8w[0], addr6="0b"+self.addr9[-6:])
-        elif "0b"+self.addr9[-9:-6] == "0b001":
-            self.ram64_1_out = self.ram64_1.evaluate(_in16=self._in16, load=dmux8w[1], addr6="0b"+self.addr9[-6:])
-        elif "0b"+self.addr9[-9:-6] == "0b010":
-            self.ram64_2_out = self.ram64_2.evaluate(_in16=self._in16, load=dmux8w[2], addr6="0b"+self.addr9[-6:])
-        elif "0b"+self.addr9[-9:-6] == "0b011":
-            self.ram64_3_out = self.ram64_3.evaluate(_in16=self._in16, load=dmux8w[3], addr6="0b"+self.addr9[-6:])
-        elif "0b"+self.addr9[-9:-6] == "0b100":
-            self.ram64_4_out = self.ram64_4.evaluate(_in16=self._in16, load=dmux8w[4], addr6="0b"+self.addr9[-6:])
-        elif "0b"+self.addr9[-9:-6] == "0b101":
-            self.ram64_5_out = self.ram64_5.evaluate(_in16=self._in16, load=dmux8w[5], addr6="0b"+self.addr9[-6:])
-        elif "0b"+self.addr9[-9:-6] == "0b110":
-            self.ram64_6_out = self.ram64_6.evaluate(_in16=self._in16, load=dmux8w[6], addr6="0b"+self.addr9[-6:])
-        elif "0b"+self.addr9[-9:-6] == "0b111":
-            self.ram64_7_out = self.ram64_7.evaluate(_in16=self._in16, load=dmux8w[7], addr6="0b"+self.addr9[-6:])
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b" + self.addr9[-9:-6])
+        if "0b" + self.addr9[-9:-6] == "0b000":
+            self.ram64_0_out = self.ram64_0.evaluate(_in16=self._in16, load=dmux8w[0], addr6="0b" + self.addr9[-6:])
+        elif "0b" + self.addr9[-9:-6] == "0b001":
+            self.ram64_1_out = self.ram64_1.evaluate(_in16=self._in16, load=dmux8w[1], addr6="0b" + self.addr9[-6:])
+        elif "0b" + self.addr9[-9:-6] == "0b010":
+            self.ram64_2_out = self.ram64_2.evaluate(_in16=self._in16, load=dmux8w[2], addr6="0b" + self.addr9[-6:])
+        elif "0b" + self.addr9[-9:-6] == "0b011":
+            self.ram64_3_out = self.ram64_3.evaluate(_in16=self._in16, load=dmux8w[3], addr6="0b" + self.addr9[-6:])
+        elif "0b" + self.addr9[-9:-6] == "0b100":
+            self.ram64_4_out = self.ram64_4.evaluate(_in16=self._in16, load=dmux8w[4], addr6="0b" + self.addr9[-6:])
+        elif "0b" + self.addr9[-9:-6] == "0b101":
+            self.ram64_5_out = self.ram64_5.evaluate(_in16=self._in16, load=dmux8w[5], addr6="0b" + self.addr9[-6:])
+        elif "0b" + self.addr9[-9:-6] == "0b110":
+            self.ram64_6_out = self.ram64_6.evaluate(_in16=self._in16, load=dmux8w[6], addr6="0b" + self.addr9[-6:])
+        elif "0b" + self.addr9[-9:-6] == "0b111":
+            self.ram64_7_out = self.ram64_7.evaluate(_in16=self._in16, load=dmux8w[7], addr6="0b" + self.addr9[-6:])
         else:
-            raise RuntimeError("Bad case in RAM512: %s" % "0b"+self.addr6[-9:-6])
+            raise RuntimeError("Bad case in RAM512: %s" % "0b" + self.addr6[-9:-6])
 
         # print("outputs:", self.ram64_0_out, self.ram64_1_out, self.ram64_2_out, self.ram64_3_out, self.ram64_4_out,
         #       self.ram64_5_out, self.ram64_6_out, self.ram64_7_out)
@@ -1214,7 +1245,7 @@ class RAM512(Gate):
         self.ram64_d_out = Mux8Way16().evaluate(
             a16=self.ram64_0_out, b16=self.ram64_1_out, c16=self.ram64_2_out, d16=self.ram64_3_out,
             e16=self.ram64_4_out, f16=self.ram64_5_out, g16=self.ram64_6_out, h16=self.ram64_7_out,
-            sel3="0b"+self.addr9[-9:-6])
+            sel3="0b" + self.addr9[-9:-6])
 
         # print(self.name, self.ram64_d_out)
         return self.ram64_d_out
@@ -1243,6 +1274,7 @@ class RAM4K(Gate):
         Mux8Way16(a=r0out, b=r1out, c=r2out, d=r3out, e=r4out, f=r5out, g=r6out, h=r7out, sel=address[0..2], out=out);
     }
     """
+
     def __init__(self, name=None):
         super().__init__()
         self.name = name
@@ -1270,25 +1302,25 @@ class RAM4K(Gate):
 
         # print("\ninputs:", self.name, self._in16, self.load, self.addr6)
 
-        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b"+self.addr12[-12:-9])
-        if "0b"+self.addr12[-12:-9] == "0b000":
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3="0b" + self.addr12[-12:-9])
+        if "0b" + self.addr12[-12:-9] == "0b000":
             self.ram512_0_out = self.ram512_0.evaluate(_in16=self._in16, load=dmux8w[0], addr9=self.addr12[-9:])
-        elif "0b"+self.addr12[-12:-9] == "0b001":
+        elif "0b" + self.addr12[-12:-9] == "0b001":
             self.ram512_1_out = self.ram512_1.evaluate(_in16=self._in16, load=dmux8w[1], addr9=self.addr12[-9:])
-        elif "0b"+self.addr12[-12:-9] == "0b010":
+        elif "0b" + self.addr12[-12:-9] == "0b010":
             self.ram512_2_out = self.ram512_2.evaluate(_in16=self._in16, load=dmux8w[2], addr9=self.addr12[-9:])
-        elif "0b"+self.addr12[-12:-9] == "0b011":
+        elif "0b" + self.addr12[-12:-9] == "0b011":
             self.ram512_3_out = self.ram512_3.evaluate(_in16=self._in16, load=dmux8w[3], addr9=self.addr12[-9:])
-        elif "0b"+self.addr12[-12:-9] == "0b100":
+        elif "0b" + self.addr12[-12:-9] == "0b100":
             self.ram512_4_out = self.ram512_4.evaluate(_in16=self._in16, load=dmux8w[4], addr9=self.addr12[-9:])
-        elif "0b"+self.addr12[-12:-9] == "0b101":
+        elif "0b" + self.addr12[-12:-9] == "0b101":
             self.ram512_5_out = self.ram512_5.evaluate(_in16=self._in16, load=dmux8w[5], addr9=self.addr12[-9:])
-        elif "0b"+self.addr12[-12:-9] == "0b110":
+        elif "0b" + self.addr12[-12:-9] == "0b110":
             self.ram512_6_out = self.ram512_6.evaluate(_in16=self._in16, load=dmux8w[6], addr9=self.addr12[-9:])
-        elif "0b"+self.addr12[-12:-9] == "0b111":
+        elif "0b" + self.addr12[-12:-9] == "0b111":
             self.ram512_7_out = self.ram512_7.evaluate(_in16=self._in16, load=dmux8w[7], addr9=self.addr12[-9:])
         else:
-            raise RuntimeError("Bad case in RAM4K: %s" % "0b"+self.addr12[-12:-9])
+            raise RuntimeError("Bad case in RAM4K: %s" % "0b" + self.addr12[-12:-9])
 
         # print("outputs:", self.ram512_0_out, self.ram512_1_out, self.ram512_2_out, self.ram512_3_out,
         #       self.ram512_4_out, self.ram512_5_out, self.ram512_6_out, self.ram512_7_out)
@@ -1296,7 +1328,7 @@ class RAM4K(Gate):
         self.ram512_d_out = Mux8Way16().evaluate(
             a16=self.ram512_0_out, b16=self.ram512_1_out, c16=self.ram512_2_out, d16=self.ram512_3_out,
             e16=self.ram512_4_out, f16=self.ram512_5_out, g16=self.ram512_6_out, h16=self.ram512_7_out,
-            sel3="0b"+self.addr12[-12:-9])
+            sel3="0b" + self.addr12[-12:-9])
 
         # print(self.name, self.ram512_d_out)
         return self.ram512_d_out
@@ -1321,6 +1353,7 @@ class RAM16K(Gate):
         Mux4Way16(a=r0out, b=r1out, c=r2out, d=r3out, sel=address[0..1], out=out);
     }
     """
+
     def __init__(self, name=None):
         super().__init__()
         self.name = name
@@ -1340,23 +1373,23 @@ class RAM16K(Gate):
 
         # print("\ninputs:", self.name, self._in16, self.load, self.addr14)
 
-        dmux4w = DMux4Way().evaluate(_in=self.load, sel2="0b"+self.addr14[-14:-12])
-        if "0b"+self.addr14[-14:-12] == "0b00":
+        dmux4w = DMux4Way().evaluate(_in=self.load, sel2="0b" + self.addr14[-14:-12])
+        if "0b" + self.addr14[-14:-12] == "0b00":
             self.ram4k_0_out = self.ram4k_0.evaluate(_in16=self._in16, load=dmux4w[0], addr12=self.addr14[-12:])
-        elif "0b"+self.addr14[-14:-12] == "0b01":
+        elif "0b" + self.addr14[-14:-12] == "0b01":
             self.ram4k_1_out = self.ram4k_1.evaluate(_in16=self._in16, load=dmux4w[1], addr12=self.addr14[-12:])
-        elif "0b"+self.addr14[-14:-12] == "0b10":
+        elif "0b" + self.addr14[-14:-12] == "0b10":
             self.ram4k_2_out = self.ram4k_2.evaluate(_in16=self._in16, load=dmux4w[2], addr12=self.addr14[-12:])
-        elif "0b"+self.addr14[-14:-12] == "0b11":
+        elif "0b" + self.addr14[-14:-12] == "0b11":
             self.ram4k_3_out = self.ram4k_3.evaluate(_in16=self._in16, load=dmux4w[3], addr12=self.addr14[-12:])
         else:
-            raise RuntimeError("Bad case in RAM16K: %s" % "0b"+self.addr12[-14:-12])
+            raise RuntimeError("Bad case in RAM16K: %s" % "0b" + self.addr12[-14:-12])
 
         # print("outputs:", self.ram4k_0_out, self.ram4k_1_out, self.ram4k_2_out, self.ram4k_3_out)
 
         self.ram4k_d_out = Mux4Way16().evaluate(
             a16=self.ram4k_0_out, b16=self.ram4k_1_out, c16=self.ram4k_2_out, d16=self.ram4k_3_out,
-            sel2="0b"+self.addr14[-14:-12])
+            sel2="0b" + self.addr14[-14:-12])
 
         # print(self.name, self.ram4k_d_out)
         return self.ram4k_d_out
@@ -1390,23 +1423,24 @@ class DMux3(Gate):
         Nand(a=cNand3, b=cNand3, out=b[2]);
     }
     """
+
     def calculate(self):
         # dmux1
         nand_a0 = NandGate().evaluate(a=self.sel, b=self.sel)
-        nand_b0 = NandGate().evaluate(a="0b"+self._in3[-1], b=nand_a0)
-        nand_c0 = NandGate().evaluate(a=self.sel, b="0b"+self._in3[-1])
+        nand_b0 = NandGate().evaluate(a="0b" + self._in3[-1], b=nand_a0)
+        nand_c0 = NandGate().evaluate(a=self.sel, b="0b" + self._in3[-1])
         a0 = NandGate().evaluate(a=nand_b0, b=nand_b0)[-1]
         b0 = NandGate().evaluate(a=nand_c0, b=nand_c0)[-1]
 
         # dmux2
-        nand_b1 = NandGate().evaluate(a="0b"+self._in3[-2], b=nand_a0)
-        nand_c1 = NandGate().evaluate(a=self.sel, b="0b"+self._in3[-2])
+        nand_b1 = NandGate().evaluate(a="0b" + self._in3[-2], b=nand_a0)
+        nand_c1 = NandGate().evaluate(a=self.sel, b="0b" + self._in3[-2])
         a1 = NandGate().evaluate(a=nand_b1, b=nand_b1)[-1]
         b1 = NandGate().evaluate(a=nand_c1, b=nand_c1)[-1]
 
         # dmux3
-        nand_b2 = NandGate().evaluate(a="0b"+self._in3[-3], b=nand_a0)
-        nand_c2 = NandGate().evaluate(a=self.sel, b="0b"+self._in3[-3])
+        nand_b2 = NandGate().evaluate(a="0b" + self._in3[-3], b=nand_a0)
+        nand_c2 = NandGate().evaluate(a=self.sel, b="0b" + self._in3[-3])
         a2 = NandGate().evaluate(a=nand_b2, b=nand_b2)[-1]
         b2 = NandGate().evaluate(a=nand_c2, b=nand_c2)[-1]
 
@@ -1426,10 +1460,11 @@ class Dmux4Way3(Gate):
         DMux3(in=dIn1, sel=sel[0], a=c, b=d);
     }
     """
+
     def calculate(self):
-        dmux3_0a, dmux3_0b = DMux3().evaluate(_in3=self._in3, sel="0b"+self.sel2[-2])
-        dmux3_1a, dmux3_1b = DMux3().evaluate(_in3=dmux3_0a, sel="0b"+self.sel2[-1])
-        dmux3_2a, dmux3_2b = DMux3().evaluate(_in3=dmux3_0b, sel="0b"+self.sel2[-1])
+        dmux3_0a, dmux3_0b = DMux3().evaluate(_in3=self._in3, sel="0b" + self.sel2[-2])
+        dmux3_1a, dmux3_1b = DMux3().evaluate(_in3=dmux3_0a, sel="0b" + self.sel2[-1])
+        dmux3_2a, dmux3_2b = DMux3().evaluate(_in3=dmux3_0b, sel="0b" + self.sel2[-1])
         return dmux3_1a, dmux3_1b, dmux3_2a, dmux3_2b
 
 
@@ -1438,6 +1473,7 @@ class Screen(Gate):
     // No HDL, implemented in Java on the course
     // Screen(in=in[16],load=load,address=[13],out=out[16]);
     """
+
     def __init__(self, name=None):
         super().__init__()
         self.name = name
@@ -1452,19 +1488,19 @@ class Screen(Gate):
         # only evaluate selected RAM4K block (python performance optimisation)
 
         # print("\ninputs:", self.name, self._in16, self.load, self.addr14)
-        
-        dmux = DMux().evaluate(_in=self.load, sel="0b"+self.addr13[-13])
-        
-        if "0b"+self.addr13[-13] == "0b0":
+
+        dmux = DMux().evaluate(_in=self.load, sel="0b" + self.addr13[-13])
+
+        if "0b" + self.addr13[-13] == "0b0":
             self.ram4k_0_out = self.ram4k_0.evaluate(_in16=self._in16, load=dmux[0], addr12=self.addr13[-12:])
-        elif "0b"+self.addr13[-13] == "0b1":
+        elif "0b" + self.addr13[-13] == "0b1":
             self.ram4k_1_out = self.ram4k_1.evaluate(_in16=self._in16, load=dmux[1], addr12=self.addr13[-12:])
         else:
-            raise RuntimeError("Bad case in Screen: %s" % "0b"+self.addr13[-13])
+            raise RuntimeError("Bad case in Screen: %s" % "0b" + self.addr13[-13])
 
         # print("outputs:", self.ram4k_0_out, self.ram4k_1_out, self.ram4k_2_out, self.ram4k_3_out)
 
-        self.screen_out = Mux16().evaluate(a16=self.ram4k_0_out, b16=self.ram4k_1_out, sel="0b"+self.addr13[-13])
+        self.screen_out = Mux16().evaluate(a16=self.ram4k_0_out, b16=self.ram4k_1_out, sel="0b" + self.addr13[-13])
 
         # print(self.name, self.ram4k_d_out)
         return self.screen_out
@@ -1496,6 +1532,7 @@ class Memory(Gate):
         Mux4Way16(a=ramOut,b=ramOut,c=screenOut,d=keyOut,sel[0]=address[13],sel[1]=address[14],out=out);
     }
     """
+
     def __init__(self, name=None):
         super().__init__()
         self.name = name
@@ -1509,7 +1546,7 @@ class Memory(Gate):
     def calculate(self):
         # determine which chip is being addressed from 2xMSB in address
         dmux4w_a, dmux4w_b, dmux4w_c, dmux4w_d = DMux4Way().evaluate(
-            _in="0b1", sel2="0b"+self.addr15[-15:-13])
+            _in="0b1", sel2="0b" + self.addr15[-15:-13])
         or0 = OrGate().evaluate(a=dmux4w_a, b=dmux4w_b)
 
         # determine what chip, if any, will load
@@ -1518,19 +1555,19 @@ class Memory(Gate):
 
         # process memory maps: selective load, always read
         # only evaluate selected block (python performance optimisation)
-        if "0b"+self.addr15[-15:-13] in ("0b00", "0b01"):
-            self.ram16k_out = self.ram16k.evaluate(_in16=self._in16, load=and0, addr14="0b"+self.addr15[-14:])
-        elif "0b"+self.addr15[-15:-13] == "0b10":
-            self.screen_out = self.screen.evaluate(_in16=self._in16, load=and1, addr13="0b"+self.addr15[-13:])
-        elif "0b"+self.addr15[-15:-13] == "0b11":
+        if "0b" + self.addr15[-15:-13] in ("0b00", "0b01"):
+            self.ram16k_out = self.ram16k.evaluate(_in16=self._in16, load=and0, addr14="0b" + self.addr15[-14:])
+        elif "0b" + self.addr15[-15:-13] == "0b10":
+            self.screen_out = self.screen.evaluate(_in16=self._in16, load=and1, addr13="0b" + self.addr15[-13:])
+        elif "0b" + self.addr15[-15:-13] == "0b11":
             self.keyboard_out = self.keyboard.evaluate(_in16=self._in16, load=self.load)
         else:
-            raise RuntimeError("Bad case in Memory: %s" % "0b"+self.addr15[-15:-13])
+            raise RuntimeError("Bad case in Memory: %s" % "0b" + self.addr15[-15:-13])
 
         # select which out gets expressed
         # Mux4Way16(a=ramOut,b=ramOut,c=screenOut,d=keyOut,sel[0]=address[13],sel[1]=address[14],out=out);
         return Mux4Way16().evaluate(a16=self.ram16k_out, b16=self.ram16k_out, c16=self.screen_out,
-                                    d16=self.keyboard_out, sel2="0b"+self.addr15[-15:-13])
+                                    d16=self.keyboard_out, sel2="0b" + self.addr15[-15:-13])
 
 
 class CPU(Gate):
@@ -1612,6 +1649,7 @@ class CPU(Gate):
             f=instruction[7],no=instruction[6],out=outM,out=ALUout,zr=zrOut,ng=ngOut);
     }
     """
+
     def __init__(self, name=None):
         super().__init__()
         self.name = name
@@ -1635,17 +1673,17 @@ class CPU(Gate):
 
     def calculate(self):
         # opcode var
-        not_opcode = NotGate().evaluate(_in="0b"+self._in16[-16])
+        not_opcode = NotGate().evaluate(_in="0b" + self._in16[-16])
 
         # Determine whether instruction is A or C type
         #         XNor(a=instruction[15],b=false,out=aType);
-        a_type = XNorGate().evaluate(a="0b"+self._in16[-16], b="0b0")
+        a_type = XNorGate().evaluate(a="0b" + self._in16[-16], b="0b0")
 
         # Solve whether writeM is false (A inst) or variable (C inst)
         #         XNor(a=aType,b=false,out=aTypeXNor);
         #         And(a=aTypeXNor,b=instruction[3],out=writeM);
         a_type_xnor = XNorGate().evaluate(a=a_type, b="0b0")
-        self.write_out = AndGate().evaluate(a=a_type_xnor, b="0b"+self._in16[-4])
+        self.write_out = AndGate().evaluate(a=a_type_xnor, b="0b" + self._in16[-4])  # M dest
 
         # emit address (A inst) or result (C inst)
         #          Mux16(a=ALUout,b=instruction,sel=notOpcode,out=mux1out);
@@ -1653,11 +1691,11 @@ class CPU(Gate):
 
         # Solve whether aRegisterLoad is true (A inst) or variable (C inst)
         #         Or(a=aType,b=instruction[5],out=aRegisterLoad);
-        a_load = OrGate().evaluate(a=a_type, b="0b"+self._in16[-6])
+        a_load = OrGate().evaluate(a=a_type, b="0b" + self._in16[-6])  # A dest
 
         # Solve whether dRegisterLoad is false (A inst) or variable (C inst)
         #         And(a=aTypeXNor,b=instruction[4],out=dRegisterLoad);
-        d_load = AndGate().evaluate(a=a_type_xnor, b="0b"+self._in16[-5])
+        d_load = AndGate().evaluate(a=a_type_xnor, b="0b" + self._in16[-5])  # D dest
 
         # a_out: emit current or previous address based on load
         # d_out: emit current or previous result based on load
@@ -1667,7 +1705,7 @@ class CPU(Gate):
         #         Mux16(a=aRegisterOut,b=inM,sel=instruction[12],out=mux2out);
         self.a_out = self.a_register.evaluate(_in16=mux1out, load=a_load)
         self.d_out = self.d_register.evaluate(_in16=self.m_out, load=d_load)
-        mux2out = Mux16().evaluate(a16=self.a_out, b16=self.b16, sel="0b"+self._in16[-13])  # sel=A/M bit
+        mux2out = Mux16().evaluate(a16=self.a_out, b16=self.b16, sel="0b" + self._in16[-13])  # sel=A/M bit
 
         # evaluate jump code
         # block 1: evaluate jmp bits for 111 or other (removed)
@@ -1679,19 +1717,19 @@ class CPU(Gate):
         #         c[0]=cOut0,c[1]=cOut1,c[2]=cOut2,
         #         d[0]=dOut0,d[1]=dOut1,d[2]=dOut2);
         a_out, b_out, c_out, d_out = Dmux4Way3().evaluate(
-            _in3="0b"+self._in16[-3:], sel2="0b" + self.ALU.zr[-1] + self.ALU.ng[-1])
+            _in3="0b" + self._in16[-3:], sel2="0b" + self.ALU.zr[-1] + self.ALU.ng[-1])  # JMP bits
 
         # block 2-1: evaluate zr=0/ng=0 (011,001,101,111 == LSB=1)
         #         And(a=aOut0,b=true,out=out21);
-        out21 = AndGate().evaluate(a="0b"+a_out[-1], b="0b1")
+        out21 = AndGate().evaluate(a="0b" + a_out[-1], b="0b1")
 
         # block 2-2: evaluate zr=0/ng=1 (100,101,110,111 == MSB=1)
         #         And(a=true,b=b_out2,out=out22);
-        out22 = AndGate().evaluate(a="0b1", b="0b"+b_out[-3])
+        out22 = AndGate().evaluate(a="0b1", b="0b" + b_out[-3])
 
         # block 2-3: evaluate zr=1/ng=0 (010,011,110,111 == MidB=1)
         #         And(a=true,b=cOut1,out=out23);
-        out23 = AndGate().evaluate(a="0b1", b="0b"+c_out[-2])
+        out23 = AndGate().evaluate(a="0b1", b="0b" + c_out[-2])
 
         # block 2-4: evaluate zr=1/ng=1 (should never happen)
         # block 3: evaluating block 1/2 outputs
@@ -1709,13 +1747,8 @@ class CPU(Gate):
         # Back to CPU glue code
         #         Not(in=jumpOutFinal,out=notJumpOutFinal);
         #         PC(in=aRegisterOut,load=jumpOutFinal,inc=notJumpOutFinal,reset=reset,out[0..14]=pc);
-        #         ALU(x=dRegisterOut,y=mux2out,zx=instruction[11],nx=instruction[10],zy=instruction[9],
-        #           ny=instruction[8], f=instruction[7],no=instruction[6],out=outM,out=ALUout,zr=zrOut,ng=ngOut);
         not_jump_out_final = NotGate().evaluate(_in=jump_out_final)
         self.pc_out = self.PC.evaluate(_in16=self.a_out, load=jump_out_final, inc=not_jump_out_final, reset=self.reset)
-        self.m_out = self.ALU.evaluate(
-            x=self.d_out, y=mux2out, zx="0b"+self._in16[-12], nx="0b"+self._in16[-11], zy="0b"+self._in16[-10],
-            ny="0b"+self._in16[-9], f="0b"+self._in16[-8], no="0b"+self._in16[-7])[0]
 
         # python only changes due to timing difference in DFF implementation
         # retrieve d_out from current cycle for unit test
@@ -1727,8 +1760,8 @@ class CPU(Gate):
 
         # retrieve m_out from current cycle when "A" in destination and "M" is not
         # (ignore ALU result and pass through inM)
-        nand_m = NandGate().evaluate(a="0b"+self._in16[-4], b="0b1")  # true = not M dest
-        and_ac = AndGate().evaluate(a="0b"+self._in16[-6], b="0b"+self._in16[-16])  # C inst and A dest
+        nand_m = NandGate().evaluate(a="0b" + self._in16[-4], b="0b1")  # M dest
+        and_ac = AndGate().evaluate(a="0b" + self._in16[-6], b="0b" + self._in16[-16])  # A dest, C inst
         and_ac_not_m = AndGate().evaluate(a=nand_m, b=and_ac)
         m_out = Mux16().evaluate(a16=self.m_out, b16=self.b16, sel=and_ac_not_m)
 
@@ -1753,6 +1786,7 @@ class Computer(Gate):
         Memory(in=ramData,load=writeMem,address=addressRAM,out=ramOut);
     }
     """
+
     def calculate(self):
         raise NotImplementedError  # included for documenation only
 
@@ -2116,7 +2150,6 @@ def main(test_all=False):
                              f="0b0", no="0b1") == ("0b1111111111111111", "0b0", "0b1")
         assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0",
                              f="0b0", no="0b1") == ("0b0000000000000000", "0b1", "0b0")
-
         assert _alu.evaluate(x="0b0000000000000000", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0",
                              f="0b0", no="0b1") == ("0b1111111111111111", "0b1", "0b0")
 
@@ -2419,125 +2452,345 @@ def main(test_all=False):
         assert _dmux4way3.evaluate(_in3="0b111", sel2="0b11") == ("0b000", "0b000", "0b000", "0b111")
 
         # SCREEN: sequential set (000/XXX)
-        assert screen.evaluate(_in16="0b0000000000000000", load="0b1", addr13="0b0000000000000") == "0b0000000000000000"
-        assert screen.evaluate(_in16="0b0000000000000001", load="0b1", addr13="0b0000000000001") == "0b0000000000000001"
-        assert screen.evaluate(_in16="0b0000000000000010", load="0b1", addr13="0b0000000000010") == "0b0000000000000010"
-        assert screen.evaluate(_in16="0b0000000000000011", load="0b1", addr13="0b0000000000111") == "0b0000000000000011"
-        assert screen.evaluate(_in16="0b1000000000000000", load="0b1", addr13="0b0000000001100") == "0b1000000000000000"
-        assert screen.evaluate(_in16="0b1010000000000000", load="0b1", addr13="0b0000000011101") == "0b1010000000000000"
-        assert screen.evaluate(_in16="0b1110000000000000", load="0b1", addr13="0b0000001111110") == "0b1110000000000000"
-        assert screen.evaluate(_in16="0b1111000000000000", load="0b1", addr13="0b0000011111111") == "0b1111000000000000"
+        assert _screen.evaluate(_in16="0b0000000000000000", load="0b1",
+                                addr13="0b0000000000000") == "0b0000000000000000"
+        assert _screen.evaluate(_in16="0b0000000000000001", load="0b1",
+                                addr13="0b0000000000001") == "0b0000000000000001"
+        assert _screen.evaluate(_in16="0b0000000000000010", load="0b1",
+                                addr13="0b0000000000010") == "0b0000000000000010"
+        assert _screen.evaluate(_in16="0b0000000000000011", load="0b1",
+                                addr13="0b0000000000111") == "0b0000000000000011"
+        assert _screen.evaluate(_in16="0b1000000000000000", load="0b1",
+                                addr13="0b0000000001100") == "0b1000000000000000"
+        assert _screen.evaluate(_in16="0b1010000000000000", load="0b1",
+                                addr13="0b0000000011101") == "0b1010000000000000"
+        assert _screen.evaluate(_in16="0b1110000000000000", load="0b1",
+                                addr13="0b0000001111110") == "0b1110000000000000"
+        assert _screen.evaluate(_in16="0b1111000000000000", load="0b1",
+                                addr13="0b0000011111111") == "0b1111000000000000"
 
         # SCREEN: sequential set (111/XXX)
-        assert screen.evaluate(_in16="0b0000000000000000", load="0b1", addr13="0b1111111111000") == "0b0000000000000000"
-        assert screen.evaluate(_in16="0b0000000000000001", load="0b1", addr13="0b1111111110001") == "0b0000000000000001"
-        assert screen.evaluate(_in16="0b0000000000000010", load="0b1", addr13="0b1111111100010") == "0b0000000000000010"
-        assert screen.evaluate(_in16="0b0000000000000011", load="0b1", addr13="0b1111111000011") == "0b0000000000000011"
-        assert screen.evaluate(_in16="0b1000000000000000", load="0b1", addr13="0b1111110000000") == "0b1000000000000000"
-        assert screen.evaluate(_in16="0b1010000000000000", load="0b1", addr13="0b1111111111101") == "0b1010000000000000"
-        assert screen.evaluate(_in16="0b1110000000000000", load="0b1", addr13="0b1111111111110") == "0b1110000000000000"
-        assert screen.evaluate(_in16="0b1111000000000000", load="0b1", addr13="0b1111111111111") == "0b1111000000000000"
+        assert _screen.evaluate(_in16="0b0000000000000000", load="0b1",
+                                addr13="0b1111111111000") == "0b0000000000000000"
+        assert _screen.evaluate(_in16="0b0000000000000001", load="0b1",
+                                addr13="0b1111111110001") == "0b0000000000000001"
+        assert _screen.evaluate(_in16="0b0000000000000010", load="0b1",
+                                addr13="0b1111111100010") == "0b0000000000000010"
+        assert _screen.evaluate(_in16="0b0000000000000011", load="0b1",
+                                addr13="0b1111111000011") == "0b0000000000000011"
+        assert _screen.evaluate(_in16="0b1000000000000000", load="0b1",
+                                addr13="0b1111110000000") == "0b1000000000000000"
+        assert _screen.evaluate(_in16="0b1010000000000000", load="0b1",
+                                addr13="0b1111111111101") == "0b1010000000000000"
+        assert _screen.evaluate(_in16="0b1110000000000000", load="0b1",
+                                addr13="0b1111111111110") == "0b1110000000000000"
+        assert _screen.evaluate(_in16="0b1111000000000000", load="0b1",
+                                addr13="0b1111111111111") == "0b1111000000000000"
 
         # SCREEN: sequential load (000/XXX)
-        assert screen.evaluate(_in16="0b0000000000000000", load="0b0", addr13="0b0000000000000") == "0b0000000000000000"
-        assert screen.evaluate(_in16="0b0000000000000001", load="0b0", addr13="0b0000000000001") == "0b0000000000000001"
-        assert screen.evaluate(_in16="0b0000000000000010", load="0b0", addr13="0b0000000000010") == "0b0000000000000010"
-        assert screen.evaluate(_in16="0b0000000000000011", load="0b0", addr13="0b0000000000111") == "0b0000000000000011"
-        assert screen.evaluate(_in16="0b1000000000000000", load="0b0", addr13="0b0000000001100") == "0b1000000000000000"
-        assert screen.evaluate(_in16="0b1010000000000000", load="0b0", addr13="0b0000000011101") == "0b1010000000000000"
-        assert screen.evaluate(_in16="0b1110000000000000", load="0b0", addr13="0b0000001111110") == "0b1110000000000000"
-        assert screen.evaluate(_in16="0b1111000000000000", load="0b0", addr13="0b0000011111111") == "0b1111000000000000"
+        assert _screen.evaluate(_in16="0b0000000000000000", load="0b0",
+                                addr13="0b0000000000000") == "0b0000000000000000"
+        assert _screen.evaluate(_in16="0b0000000000000001", load="0b0",
+                                addr13="0b0000000000001") == "0b0000000000000001"
+        assert _screen.evaluate(_in16="0b0000000000000010", load="0b0",
+                                addr13="0b0000000000010") == "0b0000000000000010"
+        assert _screen.evaluate(_in16="0b0000000000000011", load="0b0",
+                                addr13="0b0000000000111") == "0b0000000000000011"
+        assert _screen.evaluate(_in16="0b1000000000000000", load="0b0",
+                                addr13="0b0000000001100") == "0b1000000000000000"
+        assert _screen.evaluate(_in16="0b1010000000000000", load="0b0",
+                                addr13="0b0000000011101") == "0b1010000000000000"
+        assert _screen.evaluate(_in16="0b1110000000000000", load="0b0",
+                                addr13="0b0000001111110") == "0b1110000000000000"
+        assert _screen.evaluate(_in16="0b1111000000000000", load="0b0",
+                                addr13="0b0000011111111") == "0b1111000000000000"
 
         # SCREEN: sequential load (111/XXX)
-        assert screen.evaluate(_in16="0b0000000000000000", load="0b0", addr13="0b1111111111000") == "0b0000000000000000"
-        assert screen.evaluate(_in16="0b0000000000000001", load="0b0", addr13="0b1111111110001") == "0b0000000000000001"
-        assert screen.evaluate(_in16="0b0000000000000010", load="0b0", addr13="0b1111111100010") == "0b0000000000000010"
-        assert screen.evaluate(_in16="0b0000000000000011", load="0b0", addr13="0b1111111000011") == "0b0000000000000011"
-        assert screen.evaluate(_in16="0b1000000000000000", load="0b0", addr13="0b1111110000000") == "0b1000000000000000"
-        assert screen.evaluate(_in16="0b1010000000000000", load="0b0", addr13="0b1111111111101") == "0b1010000000000000"
-        assert screen.evaluate(_in16="0b1110000000000000", load="0b0", addr13="0b1111111111110") == "0b1110000000000000"
-        assert screen.evaluate(_in16="0b1111000000000000", load="0b0", addr13="0b1111111111111") == "0b1111000000000000"
+        assert _screen.evaluate(_in16="0b0000000000000000", load="0b0",
+                                addr13="0b1111111111000") == "0b0000000000000000"
+        assert _screen.evaluate(_in16="0b0000000000000001", load="0b0",
+                                addr13="0b1111111110001") == "0b0000000000000001"
+        assert _screen.evaluate(_in16="0b0000000000000010", load="0b0",
+                                addr13="0b1111111100010") == "0b0000000000000010"
+        assert _screen.evaluate(_in16="0b0000000000000011", load="0b0",
+                                addr13="0b1111111000011") == "0b0000000000000011"
+        assert _screen.evaluate(_in16="0b1000000000000000", load="0b0",
+                                addr13="0b1111110000000") == "0b1000000000000000"
+        assert _screen.evaluate(_in16="0b1010000000000000", load="0b0",
+                                addr13="0b1111111111101") == "0b1010000000000000"
+        assert _screen.evaluate(_in16="0b1110000000000000", load="0b0",
+                                addr13="0b1111111111110") == "0b1110000000000000"
+        assert _screen.evaluate(_in16="0b1111000000000000", load="0b0",
+                                addr13="0b1111111111111") == "0b1111000000000000"
 
-        memory = Memory()
         # 16K+8K+1 memory block for RAM, Screen, Keyboard address ranges respectively
-        assert memory.evaluate(_in16="0b1111000000000000", load="0b1",
-                               addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
-        assert memory.evaluate(_in16="0b0000111100000000", load="0b1",
-                               addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
-        assert memory.evaluate(_in16="0b1111000011110000", load="0b1",
-                               addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
-        assert memory.evaluate(_in16="0b1111000000001111", load="0b1",
-                               addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
-        assert memory.evaluate(_in16="0b1111000000000000", load="0b0",
-                               addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
-        assert memory.evaluate(_in16="0b1111000000000000", load="0b0",
-                               addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
-        assert memory.evaluate(_in16="0b1111000000000000", load="0b0",
-                               addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
-        assert memory.evaluate(_in16="0b1111000000000000", load="0b0",
-                               addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
+        assert _memory.evaluate(_in16="0b1111000000000000", load="0b1",
+                                addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
+        assert _memory.evaluate(_in16="0b0000111100000000", load="0b1",
+                                addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
+        assert _memory.evaluate(_in16="0b1111000011110000", load="0b1",
+                                addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
+        assert _memory.evaluate(_in16="0b1111000000001111", load="0b1",
+                                addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
+        assert _memory.evaluate(_in16="0b1111000000000000", load="0b0",
+                                addr15="0b001111111110000") == "0b1111000000000000"  # RAM (RAM16K)
+        assert _memory.evaluate(_in16="0b1111000000000000", load="0b0",
+                                addr15="0b011111100001111") == "0b0000111100000000"  # RAM (RAM16K)
+        assert _memory.evaluate(_in16="0b1111000000000000", load="0b0",
+                                addr15="0b101000011111111") == "0b1111000011110000"  # SCREEN (RAM8K)
+        assert _memory.evaluate(_in16="0b1111000000000000", load="0b0",
+                                addr15="0b110000111111111") == "0b1111000000001111"  # KEYBOARD (Register)
 
-    cpu = CPU()
-    # instruction, value, reset = d_out, writeM, a_out, pc
-    # ixx a cccccc ddd jjj
-    # prefix = instruction[0:2], 0XX = A, 1XX = M
-    # a/m = instruction[3:3], 1 = writeM (M in op, else 0)
-    # comp = instruction[4:9]
-    # dest = instruction[10:12]
-    # jump = instruction[13:15]
+        # instruction, value, reset = d_out, writeM, a_out, pc
+        # ixx a cccccc ddd jjj
+        # prefix = instruction[0:2], 0XX = A, 1XX = M
+        # a/m = instruction[3:3], 1 = writeM (M in op, else 0)
+        # comp = instruction[4:9]
+        # dest = instruction[10:12]
+        # jump = instruction[13:15]
 
-    # comp bits
-    # 0="101010", 1="111111", "-1"="111010", D="001100", "A/M"="110000", "!D"= "001111"
-    # "!A/M"="110001", "-D"="001111", "-A/M"="110011", "D+1"="011111", "A/M+1"="110111"
-    # "D-1"="001110", "A/M-1"="110010", "D+M/A"="000010", "D-M/A"="010011"
-    # "A/M-D"="000111", "D&M/A"="000000", "D|M/A"="010101"
-    
-    # dest bits
-    # "M"="001", "D"="010", "MD"="011", "A"= "100", "AM"="101", "AD"="110", "AMD"="111", None="000"
-    
-    # # write jump bits
-    # "JGT"="001", "JEQ"="010", "JGE"="011", "JLT"="100", "JNE"="101", "JLE"="110", "JMP"="111", None="000"
+        # comp bits
+        # 0="101010", 1="111111", "-1"="111010", D="001100", "A/M"="110000", "!D"= "001111"
+        # "!A/M"="110001", "-D"="001111", "-A/M"="110011", "D+1"="011111", "A/M+1"="110111"
+        # "D-1"="001110", "A/M-1"="110010", "D+M/A"="000010", "D-M/A"="010011"
+        # "A/M-D"="000111", "D&M/A"="000000", "D|M/A"="010101"
 
-    # a instructions (m_out is random ALU bits on a inst)
-    assert cpu.evaluate(_in16="0b0000000000000000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b0", "0b0000000000000000", "0b0000000000000001", "0b0000000000000000")  # @0000000000000000
-    assert cpu.evaluate(_in16="0b0000000000001111", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b0", "0b0000000000001111", "0b0000000000000010", "0b0000000000000000")  # @0000000000001111
-    assert cpu.evaluate(_in16="0b0000000011110000", b16="0b0000000000000000", reset="0b0") == ("0b1111111100001111", "0b0", "0b0000000011110000", "0b0000000000000011", "0b0000000000000000")  # @0000000011110000
-    assert cpu.evaluate(_in16="0b0000111100000000", b16="0b0000000000000000", reset="0b0") == ("0b1111111111111111", "0b0", "0b0000111100000000", "0b0000000000000100", "0b0000000000000000")  # @0000111100000000
-    assert cpu.evaluate(_in16="0b0001111111111111", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000000101", "0b0000000000000000")  # @0001111111111111
+        # dest bits
+        # "M"="001", "D"="010", "MD"="011", "A"= "100", "AM"="101", "AD"="110", "AMD"="111", None="000"
 
-    # instruction, m_in, reset = m_out, writeM, a_out, pc, d_out
+        # # write jump bits
+        # "JGT"="001", "JEQ"="010", "JGE"="011", "JLT"="100", "JNE"="101", "JLE"="110", "JMP"="111", None="000"
 
-    # c instructions: comp bits (write dest, no jump)
-    assert cpu.evaluate(_in16="0b111"+"0"+"101010"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000000110", "0b0000000000000000")  # D=0
-    assert cpu.evaluate(_in16="0b111"+"0"+"111111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000000111", "0b0000000000000001")  # D=1
-    assert cpu.evaluate(_in16="0b111"+"0"+"111010"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000001000", "0b1111111111111111")  # D=-1
-    assert cpu.evaluate(_in16="0b111"+"0"+"001100"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000001001", "0b1111111111111111")  # D=D
-    assert cpu.evaluate(_in16="0b111"+"0"+"110000"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000000001010", "0b0001111111111111")  # D=A
-    assert cpu.evaluate(_in16="0b111"+"1"+"110000"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000001011", "0b0000000000000000")  # D=M
-    assert cpu.evaluate(_in16="0b111"+"0"+"001101"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000001100", "0b1111111111111111")  # D=!D
-    assert cpu.evaluate(_in16="0b111"+"0"+"110001"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1110000000000000", "0b0", "0b0001111111111111", "0b0000000000001101", "0b1110000000000000")  # D=!A
-    assert cpu.evaluate(_in16="0b111"+"1"+"110001"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000001110", "0b1111111111111111")  # D=!M
-    assert cpu.evaluate(_in16="0b111"+"0"+"111111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000001111", "0b0000000000000001")  # D=1
-    assert cpu.evaluate(_in16="0b111"+"1"+"001111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000010000", "0b1111111111111111")  # D=-D
-    assert cpu.evaluate(_in16="0b111"+"0"+"110011"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1110000000000001", "0b0", "0b0001111111111111", "0b0000000000010001", "0b1110000000000001")  # D=-A
-    assert cpu.evaluate(_in16="0b111"+"1"+"110011"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000010010", "0b0000000000000000")  # D=-M
-    assert cpu.evaluate(_in16="0b111"+"0"+"011111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000010011", "0b0000000000000001")  # D=D+1
-    assert cpu.evaluate(_in16="0b111"+"0"+"110111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0010000000000000", "0b0", "0b0001111111111111", "0b0000000000010100", "0b0010000000000000")  # D=A+1
-    assert cpu.evaluate(_in16="0b111"+"1"+"110111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000010101", "0b0000000000000001")  # D=M+1
-    assert cpu.evaluate(_in16="0b111"+"0"+"001110"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000010110", "0b0000000000000000")  # D=D-1
-    assert cpu.evaluate(_in16="0b111"+"0"+"110010"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0001111111111110", "0b0", "0b0001111111111111", "0b0000000000010111", "0b0001111111111110")  # D=A-1
-    assert cpu.evaluate(_in16="0b111"+"1"+"110010"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000011000", "0b1111111111111111")  # D=M-1
-    assert cpu.evaluate(_in16="0b111"+"0"+"111111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000011001", "0b0000000000000001")  # D=1
-    assert cpu.evaluate(_in16="0b111"+"0"+"000010"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0010000000000000", "0b0", "0b0001111111111111", "0b0000000000011010", "0b0010000000000000")  # D=D+A
-    assert cpu.evaluate(_in16="0b111"+"1"+"000010"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0010000000000000", "0b0", "0b0001111111111111", "0b0000000000011011", "0b0010000000000000")  # D=D+M
-    assert cpu.evaluate(_in16="0b111"+"0"+"010011"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000011100", "0b0000000000000001")  # D=D-A
-    assert cpu.evaluate(_in16="0b111"+"1"+"010011"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000011101", "0b0000000000000001")  # D=D-M
-    assert cpu.evaluate(_in16="0b111"+"0"+"000111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0001111111111110", "0b0", "0b0001111111111111", "0b0000000000011110", "0b0001111111111110")  # D=A-D
-    assert cpu.evaluate(_in16="0b111"+"1"+"000111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1110000000000010", "0b0", "0b0001111111111111", "0b0000000000011111", "0b1110000000000010")  # D=M-D
-    assert cpu.evaluate(_in16="0b111"+"0"+"000000"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000010", "0b0", "0b0001111111111111", "0b0000000000100000", "0b0000000000000010")  # D=D&A
-    assert cpu.evaluate(_in16="0b111"+"1"+"000000"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000100001", "0b0000000000000000")  # D=D&M
-    assert cpu.evaluate(_in16="0b111"+"0"+"010101"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000000100010", "0b0001111111111111")  # D=D|A
-    assert cpu.evaluate(_in16="0b111"+"1"+"010101"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000000100011", "0b0001111111111111")  # D=D|M
+        # a instructions (m_out is random ALU bits on a inst)
+        assert _cpu.evaluate(_in16="0b0000000000000000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0000000000000000", "0b0000000000000001",
+                "0b0000000000000000")  # @0000000000000000
+        assert _cpu.evaluate(_in16="0b0000000000001111", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0000000000001111", "0b0000000000000010",
+                "0b0000000000000000")  # @0000000000001111
+        assert _cpu.evaluate(_in16="0b0000000011110000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1111111100001111", "0b0", "0b0000000011110000", "0b0000000000000011",
+                "0b0000000000000000")  # @0000000011110000
+        assert _cpu.evaluate(_in16="0b0000111100000000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1111111111111111", "0b0", "0b0000111100000000", "0b0000000000000100",
+                "0b0000000000000000")  # @0000111100000000
+        assert _cpu.evaluate(_in16="0b0001111111111111", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000000101",
+                "0b0000000000000000")  # @0001111111111111
+
+        # instruction, m_in, reset = m_out, writeM, a_out, pc, d_out
+
+        # c instructions: comp bits (write dest, no jump)
+        assert _cpu.evaluate(_in16="0b111" + "0" + "101010" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000000110", "0b0000000000000000")  # D=0
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111111" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000000111", "0b0000000000000001")  # D=1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111010" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000001000", "0b1111111111111111")  # D=-1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "001100" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000001001", "0b1111111111111111")  # D=D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110000" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000000001010", "0b0001111111111111")  # D=A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110000" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000001011", "0b0000000000000000")  # D=M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "001101" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000001100", "0b1111111111111111")  # D=!D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110001" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1110000000000000", "0b0", "0b0001111111111111", "0b0000000000001101", "0b1110000000000000")  # D=!A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110001" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000001110", "0b1111111111111111")  # D=!M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111111" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000001111", "0b0000000000000001")  # D=1
+        assert _cpu.evaluate(_in16="0b111" + "1" + "001111" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000010000", "0b1111111111111111")  # D=-D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110011" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1110000000000001", "0b0", "0b0001111111111111", "0b0000000000010001", "0b1110000000000001")  # D=-A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110011" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000010010", "0b0000000000000000")  # D=-M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "011111" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000010011", "0b0000000000000001")  # D=D+1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110111" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0010000000000000", "0b0", "0b0001111111111111", "0b0000000000010100", "0b0010000000000000")  # D=A+1
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110111" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000010101", "0b0000000000000001")  # D=M+1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "001110" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000010110", "0b0000000000000000")  # D=D-1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110010" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0001111111111110", "0b0", "0b0001111111111111", "0b0000000000010111", "0b0001111111111110")  # D=A-1
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110010" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000011000", "0b1111111111111111")  # D=M-1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111111" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000011001", "0b0000000000000001")  # D=1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "000010" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0010000000000000", "0b0", "0b0001111111111111", "0b0000000000011010", "0b0010000000000000")  # D=D+A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "000010" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0010000000000000", "0b0", "0b0001111111111111", "0b0000000000011011", "0b0010000000000000")  # D=D+M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "010011" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000011100", "0b0000000000000001")  # D=D-A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "010011" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000011101", "0b0000000000000001")  # D=D-M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "000111" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0001111111111110", "0b0", "0b0001111111111111", "0b0000000000011110", "0b0001111111111110")  # D=A-D
+        assert _cpu.evaluate(_in16="0b111" + "1" + "000111" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1110000000000010", "0b0", "0b0001111111111111", "0b0000000000011111", "0b1110000000000010")  # D=M-D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "000000" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000010", "0b0", "0b0001111111111111", "0b0000000000100000", "0b0000000000000010")  # D=D&A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "000000" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000100001", "0b0000000000000000")  # D=D&M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "010101" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000000100010", "0b0001111111111111")  # D=D|A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "010101" + "010" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000000100011", "0b0001111111111111")  # D=D|M
+
+        assert _cpu.evaluate(_in16="0b111" + "0" + "101010" + "001" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b1", "0b0001111111111111", "0b0000000000100100", "0b0001111111111111")  # M=0
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111111" + "001" + "000", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b1", "0b0001111111111111", "0b0000000000100101", "0b0001111111111111")  # M=1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111010" + "001" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b1111111111111111", "0b1", "0b0001111111111111", "0b0000000000100110", "0b0001111111111111")  # M=-1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "001100" + "001" + "000", b16="0b1111111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000000100111", "0b0001111111111111")  # M=D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110000" + "001" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000000101000", "0b0001111111111111")  # M=A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110000" + "001" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000000101001", "0b0001111111111111")  # M=M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "001101" + "001" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b1110000000000000", "0b1", "0b0001111111111111", "0b0000000000101010", "0b0001111111111111")  # M=!D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110001" + "001" + "000", b16="0b1110000000000000", reset="0b0") == \
+               ("0b1110000000000000", "0b1", "0b0001111111111111", "0b0000000000101011", "0b0001111111111111")  # M=!A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110001" + "001" + "000", b16="0b1110000000000000", reset="0b0") == \
+               ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000000101100", "0b0001111111111111")  # M=!M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111111" + "001" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0000000000000001", "0b1", "0b0001111111111111", "0b0000000000101101", "0b0001111111111111")  # M=1
+        assert _cpu.evaluate(_in16="0b111" + "1" + "001111" + "001" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b1110000000000001", "0b1", "0b0001111111111111", "0b0000000000101110", "0b0001111111111111")  # M=-D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110011" + "001" + "000", b16="0b1110000000000001", reset="0b0") == \
+               ("0b1110000000000001", "0b1", "0b0001111111111111", "0b0000000000101111", "0b0001111111111111")  # M=-A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110011" + "001" + "000", b16="0b1110000000000001", reset="0b0") == \
+               ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000000110000", "0b0001111111111111")  # M=-M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "011111" + "001" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0010000000000000", "0b1", "0b0001111111111111", "0b0000000000110001", "0b0001111111111111")  # M=D+1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110111" + "001" + "000", b16="0b0010000000000000", reset="0b0") == \
+               ("0b0010000000000000", "0b1", "0b0001111111111111", "0b0000000000110010", "0b0001111111111111")  # M=A+1
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110111" + "001" + "000", b16="0b0010000000000000", reset="0b0") == \
+               ("0b0010000000000001", "0b1", "0b0001111111111111", "0b0000000000110011", "0b0001111111111111")  # M=M+1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "001110" + "001" + "000", b16="0b0010000000000001", reset="0b0") == \
+               ("0b0001111111111110", "0b1", "0b0001111111111111", "0b0000000000110100", "0b0001111111111111")  # M=D-1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110010" + "001" + "000", b16="0b0001111111111110", reset="0b0") == \
+               ("0b0001111111111110", "0b1", "0b0001111111111111", "0b0000000000110101", "0b0001111111111111")  # M=A-1
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110010" + "001" + "000", b16="0b0001111111111110", reset="0b0") == \
+               ("0b0001111111111101", "0b1", "0b0001111111111111", "0b0000000000110110", "0b0001111111111111")  # M=M-1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111111" + "010" + "000", b16="0b0001111111111101", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000110111", "0b0000000000000001")  # D=1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "000010" + "001" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b0010000000000000", "0b1", "0b0001111111111111", "0b0000000000111000", "0b0000000000000001")  # M=D+A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "000010" + "001" + "000", b16="0b0010000000000000", reset="0b0") == \
+               ("0b0010000000000001", "0b1", "0b0001111111111111", "0b0000000000111001", "0b0000000000000001")  # M=D+M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "010011" + "001" + "000", b16="0b0010000000000001", reset="0b0") == \
+               ("0b1110000000000010", "0b1", "0b0001111111111111", "0b0000000000111010", "0b0000000000000001")  # M=D-A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "010011" + "001" + "000", b16="0b1110000000000010", reset="0b0") == \
+               ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000000111011", "0b0000000000000001")  # M=D-M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "000111" + "001" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111110", "0b1", "0b0001111111111111", "0b0000000000111100", "0b0000000000000001")  # M=A-D
+        assert _cpu.evaluate(_in16="0b111" + "1" + "000111" + "001" + "000", b16="0b0001111111111110", reset="0b0") == \
+               ("0b0001111111111101", "0b1", "0b0001111111111111", "0b0000000000111101", "0b0000000000000001")  # M=M-D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "000000" + "001" + "000", b16="0b0001111111111101", reset="0b0") == \
+               ("0b0000000000000001", "0b1", "0b0001111111111111", "0b0000000000111110", "0b0000000000000001")  # M=D&A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "000000" + "001" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b0000000000000001", "0b1", "0b0001111111111111", "0b0000000000111111", "0b0000000000000001")  # M=D&M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "010101" + "001" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000001000000", "0b0000000000000001")  # M=D|A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "010101" + "001" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000001000001", "0b0000000000000001")  # M=D|M
+
+        assert _cpu.evaluate(_in16="0b111" + "0" + "101010" + "100" + "000", b16="0b0000000000000111", reset="0b0") == \
+               ("0b0000000000000111", "0b0", "0b0000000000000000", "0b0000000001000010", "0b0000000000000001")  # A=0
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111111" + "100" + "000", b16="0b0000011100000000", reset="0b0") == \
+               ("0b0000011100000000", "0b0", "0b0000000000000001", "0b0000000001000011", "0b0000000000000001")  # A=1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111010" + "100" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b1111111111111111", "0b0000000001000100", "0b0000000000000001")  # A=-1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "001100" + "100" + "000", b16="0b1111111111111111", reset="0b0") == \
+               ("0b1111111111111111", "0b0", "0b0000000000000001", "0b0000000001000101", "0b0000000000000001")  # A=D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110000" + "100" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0000000000000001", "0b0000000001000110", "0b0000000000000001")  # A=A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110000" + "100" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000001000111", "0b0000000000000001")  # A=M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "001101" + "100" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b1111111111111110", "0b0000000001001000", "0b0000000000000001")  # A=!D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110001" + "100" + "000", b16="0b1110000000000000", reset="0b0") == \
+               ("0b1110000000000000", "0b0", "0b0000000000000001", "0b0000000001001001", "0b0000000000000001")  # A=!A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110001" + "100" + "000", b16="0b1110000000000000", reset="0b0") == \
+               ("0b1110000000000000", "0b0", "0b0001111111111111", "0b0000000001001010", "0b0000000000000001")  # A=!M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111111" + "100" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0000000000000001", "0b0000000001001011", "0b0000000000000001")  # A=1
+        assert _cpu.evaluate(_in16="0b111" + "1" + "001111" + "100" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b1111111111111111", "0b0000000001001100", "0b0000000000000001")  # A=-D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110011" + "100" + "000", b16="0b1110000000000001", reset="0b0") == \
+               ("0b1110000000000001", "0b0", "0b0000000000000001", "0b0000000001001101", "0b0000000000000001")  # A=-A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110011" + "100" + "000", b16="0b1110000000000001", reset="0b0") == \
+               ("0b1110000000000001", "0b0", "0b0001111111111111", "0b0000000001001110", "0b0000000000000001")  # A=-M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "011111" + "100" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0000000000000010", "0b0000000001001111", "0b0000000000000001")  # A=D+1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110111" + "100" + "000", b16="0b0010000000000000", reset="0b0") == \
+               ("0b0010000000000000", "0b0", "0b0000000000000011", "0b0000000001010000", "0b0000000000000001")  # A=A+1
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110111" + "100" + "000", b16="0b0010000000000000", reset="0b0") == \
+               ("0b0010000000000000", "0b0", "0b0010000000000001", "0b0000000001010001", "0b0000000000000001")  # A=M+1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "001110" + "100" + "000", b16="0b0010000000000001", reset="0b0") == \
+               ("0b0010000000000001", "0b0", "0b0000000000000000", "0b0000000001010010", "0b0000000000000001")  # A=D-1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110010" + "100" + "000", b16="0b0001111111111110", reset="0b0") == \
+               ("0b0001111111111110", "0b0", "0b1111111111111111", "0b0000000001010011", "0b0000000000000001")  # A=A-1
+        assert _cpu.evaluate(_in16="0b111" + "1" + "110010" + "100" + "000", b16="0b0001111111111110", reset="0b0") == \
+               ("0b0001111111111110", "0b0", "0b0001111111111101", "0b0000000001010100", "0b0000000000000001")  # A=M-1
+        assert _cpu.evaluate(_in16="0b111" + "0" + "000010" + "100" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0001111111111110", "0b0000000001010101", "0b0000000000000001")  # A=D+A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "000010" + "100" + "000", b16="0b0010000000000000", reset="0b0") == \
+               ("0b0010000000000000", "0b0", "0b0010000000000001", "0b0000000001010110", "0b0000000000000001")  # A=D+M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "010011" + "100" + "000", b16="0b0010000000000001", reset="0b0") == \
+               ("0b0010000000000001", "0b0", "0b1110000000000000", "0b0000000001010111", "0b0000000000000001")  # A=D-A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "010011" + "100" + "000", b16="0b1110000000000010", reset="0b0") == \
+               ("0b1110000000000010", "0b0", "0b0001111111111111", "0b0000000001011000", "0b0000000000000001")  # A=D-M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "000111" + "100" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0001111111111110", "0b0000000001011001", "0b0000000000000001")  # A=A-D
+        assert _cpu.evaluate(_in16="0b111" + "1" + "000111" + "100" + "000", b16="0b0001111111111110", reset="0b0") == \
+               ("0b0001111111111110", "0b0", "0b0001111111111101", "0b0000000001011010", "0b0000000000000001")  # A=M-D
+        assert _cpu.evaluate(_in16="0b111" + "0" + "000000" + "100" + "000", b16="0b0001111111111101", reset="0b0") == \
+               ("0b0001111111111101", "0b0", "0b0000000000000001", "0b0000000001011011", "0b0000000000000001")  # A=D&A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "000000" + "100" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0000000000000001", "0b0000000001011100", "0b0000000000000001")  # A=D&M
+        assert _cpu.evaluate(_in16="0b111" + "0" + "010101" + "100" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0000000000000001", "0b0000000001011101", "0b0000000000000001")  # A=D|A
+        assert _cpu.evaluate(_in16="0b111" + "1" + "010101" + "100" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000001011110", "0b0000000000000001")  # A=D|M
+
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110000" + "010" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000001011111", "0b0001111111111111")  # D=A
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110000" + "011" + "000", b16="0b0000000000000001", reset="0b0") == \
+               ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000001100000", "0b0001111111111111")  # MD=A
+        assert _cpu.evaluate(_in16="0b111" + "0" + "101010" + "100" + "000", b16="0b0000000000000111", reset="0b0") == \
+               ("0b0000000000000111", "0b0", "0b0000000000000000", "0b0000000001100001", "0b0001111111111111")  # A=0
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110000" + "101" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0000000000000000", "0b1", "0b0000000000000000", "0b0000000001100010", "0b0001111111111111")  # AM=A
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110000" + "110" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0001111111111111", "0b0", "0b0000000000000000", "0b0000000001100011", "0b0000000000000000")  # AD=A
+        assert _cpu.evaluate(_in16="0b111" + "0" + "110000" + "111" + "000", b16="0b0001111111111111", reset="0b0") == \
+               ("0b0000000000000000", "0b1", "0b0000000000000000", "0b0000000001100100", "0b0000000000000000")  # AMD=A
+
+        # "JGT"="001", "JEQ"="010", "JGE"="011", "JLT"="100", "JNE"="101", "JLE"="110", "JMP"="111", None="000"
+        assert _cpu.evaluate(_in16="0b0000000000001111", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0000000000001111", "0b0000000001100101",
+                "0b0000000000000000")  # @0000000000001111
+        assert _cpu.evaluate(_in16="0b111" + "0" + "101010" + "000" + "111", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0000000000001111", "0b0000000000001111", "0b0000000000000000")  # 0;JMP
+        assert _cpu.evaluate(_in16="0b0000000000001111", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0000000000001111", "0b0000000000010000",
+                "0b0000000000000000")  # @0000000000001111
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111111" + "000" + "111", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000001", "0b0", "0b0000000000001111", "0b0000000000001111", "0b0000000000000000")  # 1;JMP
+        assert _cpu.evaluate(_in16="0b0000000000001111", b16="0b0000000000000000", reset="0b0") == \
+               ("0b0000000000000000", "0b0", "0b0000000000001111", "0b0000000000010000",
+                "0b0000000000000000")  # @0000000000001111
+        assert _cpu.evaluate(_in16="0b111" + "0" + "111010" + "000" + "111", b16="0b0000000000000000", reset="0b0") == \
+               ("0b1111111111111111", "0b0", "0b0000000000001111", "0b0000000000001111", "0b0000000000000000")  # -1;JMP
 
     assert cpu.evaluate(_in16="0b111"+"0"+"101010"+"001"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b1", "0b0001111111111111", "0b0000000000100100", "0b0001111111111111")  # M=0
     assert cpu.evaluate(_in16="0b111"+"0"+"111111"+"001"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b1", "0b0001111111111111", "0b0000000000100101", "0b0001111111111111")  # M=1
@@ -2611,3 +2864,4 @@ def main(test_all=False):
 
 if __name__ == "__main__":
     main(test_all=False)
+    main(test_all=True)
