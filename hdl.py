@@ -960,12 +960,11 @@ def main():
     assert _inc16.evaluate(a16="0b0000000000000010") == "0b0000000000000011"
     assert _inc16.evaluate(a16="0b0000000000000011") == "0b0000000000000100"
     assert _inc16.evaluate(a16="0b1111111111111110") == "0b1111111111111111"
-
     """
     ALU (Arithmetic Logic Unit) Computes one of the following functions:
     // if (zx == 1) set x = 0        // 16-bit constant
-    // if (nx == 1) set x = !x       // bitwise not
     // if (zy == 1) set y = 0        // 16-bit constant
+    // if (nx == 1) set x = !x       // bitwise not
     // if (ny == 1) set y = !y       // bitwise not
     // if (f == 1)  set out = x + y  // integer 2's complement addition
     // if (f == 0)  set out = x & y  // bitwise and
@@ -982,10 +981,29 @@ def main():
         out[16], // 16-bit output
         zr, ng; // 1 bit flags
     """
-    # zx/zy
-    # print(_alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") )
-    # assert _alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000010", "0b0", "0b0")
-    # assert _alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000001", "0b0", "0b0")
+    # addition
+    assert _alu.evaluate(x="0b0000000000000000", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+    assert _alu.evaluate(x="0b0000000000000001", y="0b0000000000000001", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000010", "0b0", "0b0")
+
+    # zx/yx
+    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b1", zy="0b1", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b1", zy="0b0", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b1", nx="0b0", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+
+    # nx/ny
+    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b1", ny="0b1", f="0b1", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b1", ny="0b0", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b1", f="0b1", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+
+    # and
+    assert _alu.evaluate(x="0b0000000000000000", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+    assert _alu.evaluate(x="0b0000000000000000", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+    assert _alu.evaluate(x="0b1111111111111111", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b0000000000000000", "0b1", "0b0")
+    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b0") == ("0b1111111111111111", "0b0", "0b1")
+
+    # not(and)
+    assert _alu.evaluate(x="0b1111111111111111", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b1111111111111111", "0b0", "0b1")
+    assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b0000000000000000", "0b1", "0b0")
 
 
 if __name__ == "__main__":
