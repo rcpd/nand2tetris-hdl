@@ -1725,9 +1725,12 @@ class CPU(Gate):
         mux1out = Mux16().evaluate(a16=self.m_out, b16=self._in16, sel=not_opcode)
         a_out = self.a_register.evaluate(_in16=mux1out, load=a_load)
 
-        # retrieve m_out from current cycle when "A" is destination (ignore ALU result and pass through inM)
-        in_m_sel = AndGate().evaluate(a="0b"+self._in16[-6], b="0b"+self._in16[-16])  # A dest & C inst
-        m_out = Mux16().evaluate(a16=self.m_out, b16=self.b16, sel=in_m_sel)
+        # retrieve m_out from current cycle when "A" in destination and "M" is not
+        # (ignore ALU result and pass through inM)
+        nand_m = NandGate().evaluate(a="0b"+self._in16[-4], b="0b1")  # true = not M dest
+        and_ac = AndGate().evaluate(a="0b"+self._in16[-6], b="0b"+self._in16[-16])  # C inst and A dest
+        and_ac_not_m = AndGate().evaluate(a=nand_m, b=and_ac)
+        m_out = Mux16().evaluate(a16=self.m_out, b16=self.b16, sel=and_ac_not_m)
 
         #         OUT outM[16],        // M value output
         #             writeM,          // Write to M?
@@ -2567,8 +2570,6 @@ def main(test_all=False):
     assert cpu.evaluate(_in16="0b111"+"0"+"010101"+"001"+"000", b16="0b0000000000000001", reset="0b0") == ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000001000000", "0b0000000000000001")  # M=D|A
     assert cpu.evaluate(_in16="0b111"+"1"+"010101"+"001"+"000", b16="0b0001111111111111", reset="0b0") == ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000001000001", "0b0000000000000001")  # M=D|M
 
-    # instruction, m_in, reset = m_out, writeM, a_out, pc, d_out
-
     assert cpu.evaluate(_in16="0b111"+"0"+"101010"+"100"+"000", b16="0b0000000000000111", reset="0b0") == ("0b0000000000000111", "0b0", "0b0000000000000000", "0b0000000001000010", "0b0000000000000001")  # A=0
     assert cpu.evaluate(_in16="0b111"+"0"+"111111"+"100"+"000", b16="0b0000011100000000", reset="0b0") == ("0b0000011100000000", "0b0", "0b0000000000000001", "0b0000000001000011", "0b0000000000000001")  # A=1
     assert cpu.evaluate(_in16="0b111"+"0"+"111010"+"100"+"000", b16="0b0000000000000001", reset="0b0") == ("0b0000000000000001", "0b0", "0b1111111111111111", "0b0000000001000100", "0b0000000000000001")  # A=-1
@@ -2598,7 +2599,15 @@ def main(test_all=False):
     assert cpu.evaluate(_in16="0b111"+"1"+"000000"+"100"+"000", b16="0b0000000000000001", reset="0b0") == ("0b0000000000000001", "0b0", "0b0000000000000001", "0b0000000001011100", "0b0000000000000001")  # A=D&M
     assert cpu.evaluate(_in16="0b111"+"0"+"010101"+"100"+"000", b16="0b0000000000000001", reset="0b0") == ("0b0000000000000001", "0b0", "0b0000000000000001", "0b0000000001011101", "0b0000000000000001")  # A=D|A
     assert cpu.evaluate(_in16="0b111"+"1"+"010101"+"100"+"000", b16="0b0001111111111111", reset="0b0") == ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000001011110", "0b0000000000000001")  # A=D|M
-    
-    
+
+    assert cpu.evaluate(_in16="0b111"+"0"+"110000"+"010"+"000", b16="0b0001111111111111", reset="0b0") == ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000001011111", "0b0001111111111111")  # D=A
+    assert cpu.evaluate(_in16="0b111"+"0"+"110000"+"011"+"000", b16="0b0000000000000001", reset="0b0") == ("0b0001111111111111", "0b1", "0b0001111111111111", "0b0000000001100000", "0b0001111111111111")  # MD=A
+    assert cpu.evaluate(_in16="0b111"+"0"+"101010"+"100"+"000", b16="0b0000000000000111", reset="0b0") == ("0b0000000000000111", "0b0", "0b0000000000000000", "0b0000000001100001", "0b0001111111111111")  # A=0
+    assert cpu.evaluate(_in16="0b111"+"0"+"110000"+"101"+"000", b16="0b0001111111111111", reset="0b0") == ("0b0000000000000000", "0b1", "0b0000000000000000", "0b0000000001100010", "0b0001111111111111")  # AM=A
+    assert cpu.evaluate(_in16="0b111"+"0"+"110000"+"110"+"000", b16="0b0001111111111111", reset="0b0") == ("0b0001111111111111", "0b0", "0b0000000000000000", "0b0000000001100011", "0b0000000000000000")  # AD=A
+    assert cpu.evaluate(_in16="0b111"+"0"+"110000"+"111"+"000", b16="0b0001111111111111", reset="0b0") == ("0b0000000000000000", "0b1", "0b0000000000000000", "0b0000000001100100", "0b0000000000000000")  # AMD=A
+
+
+
 if __name__ == "__main__":
     main(test_all=False)
