@@ -12,6 +12,8 @@ p = -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -12 -13 -14 -15 -16
 
 import traceback
 import os
+import warnings
+
 from datetime import datetime
 
 # TODO: reduce multiple instantiations of classes where not required
@@ -2866,41 +2868,41 @@ def main(unit_test=False, debug=False):
         else:
             # TODO: projects 1-11 accounted for, ASM included in assembler/interpreter
             _bin_filepaths = [
-                r"nand2tetris\projects\04\fill\fill.hack",
-                r"nand2tetris\projects\04\mult\mult.hack",
-                r"nand2tetris\projects\06\add\add.hack",
-                r"nand2tetris\projects\06\max\max.hack",
-                r"nand2tetris\projects\06\max\maxL.hack",
-                r"nand2tetris\projects\06\pong\pong.hack",  # verified but slow
-                r"nand2tetris\projects\06\pong\pongL.hack",  # verified but slow
-                r"nand2tetris\projects\06\rect\rect.hack",
-                r"nand2tetris\projects\06\rect\rectL.hack",
-                r"nand2tetris\projects\07\MemoryAccess\BasicTest\BasicTest.hack",
-                r"nand2tetris\projects\07\MemoryAccess\PointerTest\PointerTest.hack",
-                r"nand2tetris\projects\07\MemoryAccess\StaticTest\StaticTest.hack",
-                r"nand2tetris\projects\07\StackArithmetic\SimpleAdd\SimpleAdd.hack",
-                r"nand2tetris\projects\07\StackArithmetic\StackTest\StackTest.hack",
-                r"nand2tetris\projects\08\FunctionCalls\FibonacciElement\FibonacciElement.hack",
-                r"nand2tetris\projects\08\FunctionCalls\NestedCall\NestedCall.hack",
-                r"nand2tetris\projects\08\FunctionCalls\SimpleFunction\SimpleFunction.hack",
-                r"nand2tetris\projects\08\FunctionCalls\StaticsTest\StaticsTest.hack",
-                r"nand2tetris\projects\08\ProgramFlow\BasicLoop\BasicLoop.hack",
-                r"nand2tetris\projects\08\ProgramFlow\FibonacciSeries\FibonacciSeries.hack",
+                r"..\projects\04\fill\fill.hack",
+                r"..\projects\04\mult\mult.hack",
+                r"..\projects\06\add\add.hack",
+                r"..\projects\06\max\max.hack",
+                r"..\projects\06\max\maxL.hack",
+                # r"..\projects\06\pong\pong.hack",  # verified but slow (modified 8/12/19)
+                # r"..\projects\06\pong\pongL.hack",  # verified but slow (modified 8/12/19)
+                r"..\projects\06\rect\rect.hack",
+                r"..\projects\06\rect\rectL.hack",
+                r"..\projects\07\MemoryAccess\BasicTest\BasicTest.hack",
+                r"..\projects\07\MemoryAccess\PointerTest\PointerTest.hack",
+                r"..\projects\07\MemoryAccess\StaticTest\StaticTest.hack",
+                r"..\projects\07\StackArithmetic\SimpleAdd\SimpleAdd.hack",
+                r"..\projects\07\StackArithmetic\StackTest\StackTest.hack",
+                r"..\projects\08\FunctionCalls\FibonacciElement\FibonacciElement.hack",
+                r"..\projects\08\FunctionCalls\NestedCall\NestedCall.hack",
+                r"..\projects\08\FunctionCalls\SimpleFunction\SimpleFunction.hack",
+                r"..\projects\08\FunctionCalls\StaticsTest\StaticsTest.hack",
+                r"..\projects\08\ProgramFlow\BasicLoop\BasicLoop.hack",
+                r"..\projects\08\ProgramFlow\FibonacciSeries\FibonacciSeries.hack",
 
-                # too large: exceeds ROM32K allocation
-                # r'nand2tetris\projects\09\Average\Average.hack',
-                # r'nand2tetris\projects\09\Fraction\Fraction.hack',
-                # r'nand2tetris\projects\09\HelloWorld\HelloWorld.hack',
-                # r'nand2tetris\projects\09\List\List.hack',
-                # r'nand2tetris\projects\09\Square\Square.hack',
-                # r'nand2tetris\projects\10\ArrayTest\ArrayTest.hack',
-                # r'nand2tetris\projects\10\Square\Square.hack',
-                # r'nand2tetris\projects\11\Average\Average.hack',
-                # r'nand2tetris\projects\11\ComplexArrays\ComplexArrays.hack',
-                # r'nand2tetris\projects\11\ConvertToBin\ConvertToBin.hack',
-                # r'nand2tetris\projects\11\Pong\Pong.hack',
-                # r'nand2tetris\projects\11\Seven\Seven.hack',
-                # r'nand2tetris\projects\11\Square\Square.hack',
+                # exceeds limit of 32k instructions in ROM chip
+                # r'..\projects\09\Average\Average.hack',
+                # r'..\projects\09\Fraction\Fraction.hack',
+                # r'..\projects\09\HelloWorld\HelloWorld.hack',
+                # r'..\projects\09\List\List.hack',
+                # r'..\projects\09\Square\Square.hack',
+                # r'..\projects\10\ArrayTest\ArrayTest.hack',
+                # r'..\projects\10\Square\Square.hack',  # generates 17 bit addresses (different Main.jack to 9/11)
+                # r'..\projects\11\Average\Average.hack',
+                # r'..\projects\11\ComplexArrays\ComplexArrays.hack',  # too large, generates 17 bit addresses
+                # r'..\projects\11\ConvertToBin\ConvertToBin.hack',
+                # r'..\projects\11\Pong\Pong.hack',  # too large, generates 17 bit addresses
+                # r'..\projects\11\Seven\Seven.hack',
+                # r'..\projects\11\Square\Square.hack',
             ]
 
         for _bin_filepath in _bin_filepaths:
@@ -2908,7 +2910,7 @@ def main(unit_test=False, debug=False):
                 with open(_bin_filepath) as _asm_file:
                     program = _asm_file.readlines()
             else:
-                print("%s %s: ROM not found" % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
+                warnings.warn("%s %s: ROM not found" % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
                 continue
 
             computer = Computer(name="computer_main", debug=debug)
@@ -2940,6 +2942,8 @@ def main(unit_test=False, debug=False):
 
 
 if __name__ == "__main__":
+    # working dir: D:\dev\nand2tetris\interpreter
+
     # run chip unit tests (~10 seconds)
     print("%s UNIT_TESTS: Initializing" % datetime.now().strftime("%H:%M:%S"))
     main(unit_test=True, debug=False)
