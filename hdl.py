@@ -2,6 +2,12 @@
 Python implementation of the HACK architecture modelled after the Nand2Tetris HDL
 NAND is a primitive implemented at the hardware level so need to define the logic ourselves
 All subsequent gates can be expressed via increasingly complex abstractions of NAND
+
+h = LSB ---------------------------------------------- MSB
+h =  0  1  2  3  4  5  6  7  8   9  10  11  12  13  14  15
+p = 15 14 13 12 11 10  9  8  7   6   5   4   3   2   1   0
+p = -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -12 -13 -14 -15 -16
+
 """
 
 # TODO: reduce multiple instantiations of classes where not required
@@ -1542,6 +1548,7 @@ class CPU(Gate):
             pc[15];          // address of next instruction
 
     PARTS:
+        // var for opcode
         Not(in=instruction[15],out=notOpcode);
         Not(in=notOpcode,out=opcode);
 
@@ -1551,6 +1558,8 @@ class CPU(Gate):
         // Solve whether writeM is false (A inst) or variable (C inst)
         XNor(a=aType,b=false,out=aTypeXNor);
         And(a=aTypeXNor,b=instruction[3],out=writeM);
+
+        // emit address (A inst) or result (C inst)
         Mux16(a=ALUout,b=instruction,sel=notOpcode,out=mux1out);
 
         // Solve whether aRegisterLoad is true (A inst) or variable (C inst)
@@ -1558,6 +1567,10 @@ class CPU(Gate):
 
         // Solve whether dRegisterLoad is false (A inst) or variable (C inst)
         And(a=aTypeXNor,b=instruction[4],out=dRegisterLoad);
+
+        // addressM: emit current or previous address based on load
+        // dRegisterOut: emit current or previous result based on load
+        // mux2out: emit (current/previous address) or (original value stored at address)
         ARegister(in=mux1out,load=aRegisterLoad,out=aRegisterOut,out[0..14]=addressM);
         DRegister(in=ALUout,load=dRegisterLoad,out=dRegisterOut);
         Mux16(a=aRegisterOut,b=inM,sel=instruction[12],out=mux2out);
@@ -1619,36 +1632,42 @@ class CPU(Gate):
     #                              // the current program (reset==0)
 
     def calculate(self):
+        # opcode var
+        not_opcode = NotGate().evaluate(_in="0b"+self._in16[-16])
+
         # Determine whether instruction is A or C type
         #         XNor(a=instruction[15],b=false,out=aType);
         a_type = XNorGate().evaluate(a="0b"+self._in16[-16], b="0b0")
+
         # Solve whether writeM is false (A inst) or variable (C inst)
         #         XNor(a=aType,b=false,out=aTypeXNor);
         #         And(a=aTypeXNor,b=instruction[3],out=writeM);
-        #         Mux16(a=ALUout,b=instruction,sel=notOpcode,out=mux1out);
         a_type_xnor = XNorGate().evaluate(a=a_type, b="0b0")
         self.write_out = AndGate().evaluate(a=a_type_xnor, b="0b"+self._in16[-4])
-        # Solve whether dRegisterLoad is false (A inst) or variable (C inst)
-        #         And(a=aTypeXNor,b=instruction[4],out=dRegisterLoad);
-        #         ARegister(in=mux1out,load=aRegisterLoad,out=aRegisterOut,out[0..14]=addressM);
-        #         DRegister(in=ALUout,load=dRegisterLoad,out=dRegisterOut);
-        #         Mux16(a=aRegisterOut,b=inM,sel=instruction[12],out=mux2out);
-        d_load = AndGate().evaluate(a=a_type_xnor, b="0b"+self._in16[-5])
 
-        mux2out = Mux16().evaluate(a16=self.a_out, b16=self.b16, sel="0b"+self._in16[-13])
-        self.alu_out = self.ALU.evaluate(
-            x=self.d_out, y=mux2out, zx="0b"+self._in16[-12], nx="0b"+self._in16[-11], zy="0b"+self._in16[-10],
-            ny="0b"+self._in16[-9], f="0b"+self._in16[-8], no="0b"+self._in16[-7])
-        # Not(in=instruction[15],out=notOpcode);
-        not_opcode = NotGate().evaluate(_in="0b"+self._in16[-16])
+        # FIXME: dependent on ALU output (unless intentionally referencing last value)
+        # emit address (A inst) or result (C inst)
+        #          Mux16(a=ALUout,b=instruction,sel=notOpcode,out=mux1out);
         mux1out = Mux16().evaluate(a16=self.alu_out[0], b16=self._in16, sel=not_opcode)
 
         # Solve whether aRegisterLoad is true (A inst) or variable (C inst)
         #         Or(a=aType,b=instruction[5],out=aRegisterLoad);
         a_load = OrGate().evaluate(a=a_type, b="0b"+self._in16[-6])
-        self.a_out = self.a_register.evaluate(_in16=mux1out, load=a_load)
 
+        # Solve whether dRegisterLoad is false (A inst) or variable (C inst)
+        #         And(a=aTypeXNor,b=instruction[4],out=dRegisterLoad);
+        d_load = AndGate().evaluate(a=a_type_xnor, b="0b"+self._in16[-5])
+
+        # FIXME: dependent on mux1out(ALU) and ALU (unless intentionally referencing last value)
+        # a_out: emit current or previous address based on load
+        # d_out: emit current or previous result based on load
+        # mux2out: emit (current/previous address) or (original value stored at address)
+        #         ARegister(in=mux1out,load=aRegisterLoad,out=aRegisterOut,out[0..14]=addressM);
+        #         DRegister(in=ALUout,load=dRegisterLoad,out=dRegisterOut);
+        #         Mux16(a=aRegisterOut,b=inM,sel=instruction[12],out=mux2out);
+        self.a_out = self.a_register.evaluate(_in16=mux1out, load=a_load)
         self.d_out = self.d_register.evaluate(_in16=self.alu_out[0], load=d_load)
+        mux2out = Mux16().evaluate(a16=self.a_out, b16=self.b16, sel="0b"+self._in16[-13])
 
         # evaluate jump code
         # block 1: evaluate jmp bits for 111 or other (removed)
@@ -1692,14 +1711,12 @@ class CPU(Gate):
         #         PC(in=aRegisterOut,load=jumpOutFinal,inc=notJumpOutFinal,reset=reset,out[0..14]=pc);
         #         ALU(x=dRegisterOut,y=mux2out,zx=instruction[11],nx=instruction[10],zy=instruction[9],
         #           ny=instruction[8], f=instruction[7],no=instruction[6],out=outM,out=ALUout,zr=zrOut,ng=ngOut);
-
-        # h = LSB ---------------------------------------------- MSB
-        # h =  0  1  2  3  4  5  6  7  8   9  10  11  12  13  14  15
-        # p = 15 14 13 12 11 10  9  8  7   6   5   4   3   2   1   0
-        # p = -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -12 -13 -14 -15 -16
-
         not_jump_out_final = NotGate().evaluate(_in=jump_out_final)
         self.pc_out = self.PC.evaluate(_in16=self.a_out, load=jump_out_final, inc=not_jump_out_final, reset=self.reset)
+        # FIXME: circular dependency where d_out feeds ALU, ALU result influences d_out (unless intentionally referencing last value)
+        self.alu_out = self.ALU.evaluate(
+            x=self.d_out, y=mux2out, zx="0b"+self._in16[-12], nx="0b"+self._in16[-11], zy="0b"+self._in16[-10],
+            ny="0b"+self._in16[-9], f="0b"+self._in16[-8], no="0b"+self._in16[-7])
 
         #         OUT outM[16],        // M value output
         #             writeM,          // Write to M?
@@ -2478,6 +2495,7 @@ def main(test_all=False):
     # instruction, value, reset = d_out, writeM, a_out, pc
 
     # c instructions: comp bits (write dest, no jump)
+    # FIXME: value == b16 == inM == contents of RAM[address], definitely not being set correctly in unit tests!
     assert cpu.evaluate(_in16="0b111"+"0"+"101010"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000000", "0b0", "0b0001111111111111", "0b0000000000000110")  # D=0
     assert cpu.evaluate(_in16="0b111"+"0"+"111111"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0000000000000001", "0b0", "0b0001111111111111", "0b0000000000000111")  # D=1
     assert cpu.evaluate(_in16="0b111"+"0"+"111010"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b1111111111111111", "0b0", "0b0001111111111111", "0b0000000000001000")  # D=-1
@@ -2512,6 +2530,11 @@ def main(test_all=False):
     assert cpu.evaluate(_in16="0b111"+"0"+"010101"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000000100010")  # D=D|A
     assert cpu.evaluate(_in16="0b111"+"1"+"010101"+"010"+"000", b16="0b0000000000000000", reset="0b0") == ("0b0001111111111111", "0b0", "0b0001111111111111", "0b0000000000100011")  # D=D|M
 
+    print(cpu.evaluate(_in16="0b111"+"0"+"111111"+"010"+"010", b16="0b0000000000000000", reset="0b0") ) # D=1
+    print(cpu.evaluate(_in16="0b111"+"0"+"111111"+"010"+"010", b16="0b0000000000000000", reset="0b0") ) # D=1
+
+    print(cpu.evaluate(_in16="0b111"+"0"+"101010"+"010"+"010", b16="0b0000000000000000", reset="0b0") ) # D=0
+    print(cpu.evaluate(_in16="0b111"+"0"+"101010"+"010"+"010", b16="0b0000000000000000", reset="0b0") ) # D=0
 
 if __name__ == "__main__":
     main(test_all=False)
