@@ -11,6 +11,7 @@ p = -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -12 -13 -14 -15 -16
 """
 
 import traceback
+import os
 from datetime import datetime
 
 # TODO: reduce multiple instantiations of classes where not required
@@ -116,77 +117,77 @@ class Gate(object):
             if type(sel2) is not str:
                 sel2 = bin(sel2)
             if sel2 not in ("0b00", "0b01", "0b10", "0b11"):
-                raise RuntimeError("sel2 input must be 2 bits")
+                raise RuntimeError("sel2 input must be 2 bits: %s" % sel2)
             self.sel2 = sel2
 
         if sel3 is not None:
             if type(sel3) is not str:
                 sel3 = bin(sel3)
             if int(sel3, 2) < 0 or int(sel3, 2) > 7:
-                raise RuntimeError("sel3 input must be 3 bits")
+                raise RuntimeError("sel3 input must be 3 bits: %s" % sel3)
             self.sel3 = sel3
 
         if _in3 is not None:
             if type(_in3) is not str:
                 _in3 = bin(_in3)
             if int(_in3, 2) < 0 or int(_in3, 2) > 7:
-                raise RuntimeError("_in3 input must be 3 bits")
+                raise RuntimeError("_in3 input must be 3 bits: %s" % _in3)
             self._in3 = _in3
 
         if addr3 is not None:
             if type(addr3) is not str:
                 addr3 = bin(addr3)
             if int(addr3, 2) < 0 or int(addr3, 2) > 7:
-                raise RuntimeError("addr3 input must be 3 bits")
+                raise RuntimeError("addr3 input must be 3 bits: %s" % addr3)
             self.addr3 = addr3
 
         if addr6 is not None:
             if type(addr6) is not str:
                 addr6 = bin(addr6)
             if int(addr6, 2) < 0 or int(addr6, 2) > 77:
-                raise RuntimeError("addr6 input must be 6 bits")
+                raise RuntimeError("addr6 input must be 6 bits: %s" % addr6)
             self.addr6 = addr6
 
         if addr9 is not None:
             if type(addr9) is not str:
                 addr9 = bin(addr9)
             if int(addr9, 2) < 0 or int(addr9, 2) > 777:
-                raise RuntimeError("addr9 input must be 9 bits")
+                raise RuntimeError("addr9 input must be 9 bits: %s" % addr9)
             self.addr9 = addr9
 
         if addr12 is not None:
             if type(addr12) is not str:
                 addr12 = bin(addr12)
             if int(addr12, 2) < 0 or int(addr12, 2) > 4095:
-                raise RuntimeError("addr12 input must be 12 bits")
+                raise RuntimeError("addr12 input must be 12 bits: %s" % addr12)
             self.addr12 = addr12
 
         if addr13 is not None:
             if type(addr13) is not str:
                 addr13 = bin(addr13)
             if int(addr13, 2) < 0 or int(addr13, 2) > 8191:
-                raise RuntimeError("addr13 input must be 13 bits")
+                raise RuntimeError("addr13 input must be 13 bits: %s" % addr13)
             self.addr13 = addr13
 
         if addr14 is not None:
             if type(addr14) is not str:
                 addr14 = bin(addr14)
             if int(addr14, 2) < 0 or int(addr14, 2) > 16383:
-                raise RuntimeError("addr14 input must be 14 bits")
+                raise RuntimeError("addr14 input must be 14 bits: %s" % addr14)
             self.addr14 = addr14
 
         if addr15 is not None:
             if type(addr15) is not str:
                 addr15 = bin(addr15)
             if int(addr15, 2) < 0 or int(addr15, 2) > 32767:
-                raise RuntimeError("addr15 input must be 15 bits")
+                raise RuntimeError("addr15 input must be 15 bits: %s" % addr15)
             self.addr15 = addr15
 
         if _in8 is not None:
             if type(_in8) is not str:
                 _in8 = bin(_in8)
             if int(_in8, 2) < 0 or int(_in8, 2) > 255:
-                raise RuntimeError("_in8 input must be 8 bits")
+                raise RuntimeError("_in8 input must be 8 bits: %s" % _in8)
             self._in8 = _in8
 
         # run gate specific logic
@@ -2870,8 +2871,8 @@ def main(unit_test=False, debug=False):
                 r"nand2tetris\projects\06\add\add.hack",
                 r"nand2tetris\projects\06\max\max.hack",
                 r"nand2tetris\projects\06\max\maxL.hack",
-                # r"nand2tetris\projects\06\pong\pong.hack",  # verified but slow
-                # r"nand2tetris\projects\06\pong\pongL.hack",  # verified but slow
+                r"nand2tetris\projects\06\pong\pong.hack",  # verified but slow
+                r"nand2tetris\projects\06\pong\pongL.hack",  # verified but slow
                 r"nand2tetris\projects\06\rect\rect.hack",
                 r"nand2tetris\projects\06\rect\rectL.hack",
                 r"nand2tetris\projects\07\MemoryAccess\BasicTest\BasicTest.hack",
@@ -2886,39 +2887,56 @@ def main(unit_test=False, debug=False):
                 r"nand2tetris\projects\08\ProgramFlow\BasicLoop\BasicLoop.hack",
                 r"nand2tetris\projects\08\ProgramFlow\FibonacciSeries\FibonacciSeries.hack",
 
-                # TODO: untested, still need project 12
-                r'nand2tetris\projects\09\Average\Average.hack',  # FIXME: addr15 input must be 15 bits
-                r'nand2tetris\projects\09\Fraction\Fraction.hack',
-                r'nand2tetris\projects\09\HelloWorld\HelloWorld.hack',
-                r'nand2tetris\projects\09\List\List.hack',
-                # r'nand2tetris\projects\09\Square\Square.hack',  # too large, generates 17 bit addresses
-                r'nand2tetris\projects\10\ArrayTest\ArrayTest.hack',
-                # r'nand2tetris\projects\10\Square\Square.hack',  # too large, generates 17 bit addresses
-                r'nand2tetris\projects\11\Average\Average.hack',
-                # r'nand2tetris\projects\11\ComplexArrays\ComplexArrays.hack',  # too large, generates 17 bit addr
-                r'nand2tetris\projects\11\ConvertToBin\ConvertToBin.hack',
-                # r'nand2tetris\projects\11\Pong\Pong.hack',  # too large, generates 17 bit addresses
-                r'nand2tetris\projects\11\Seven\Seven.hack',
-                # r'nand2tetris\projects\11\Square\Square.hack',  # too large, generates 17 bit addresses
+                # too large: exceeds ROM32K allocation
+                # r'nand2tetris\projects\09\Average\Average.hack',
+                # r'nand2tetris\projects\09\Fraction\Fraction.hack',
+                # r'nand2tetris\projects\09\HelloWorld\HelloWorld.hack',
+                # r'nand2tetris\projects\09\List\List.hack',
+                # r'nand2tetris\projects\09\Square\Square.hack',
+                # r'nand2tetris\projects\10\ArrayTest\ArrayTest.hack',
+                # r'nand2tetris\projects\10\Square\Square.hack',
+                # r'nand2tetris\projects\11\Average\Average.hack',
+                # r'nand2tetris\projects\11\ComplexArrays\ComplexArrays.hack',
+                # r'nand2tetris\projects\11\ConvertToBin\ConvertToBin.hack',
+                # r'nand2tetris\projects\11\Pong\Pong.hack',
+                # r'nand2tetris\projects\11\Seven\Seven.hack',
+                # r'nand2tetris\projects\11\Square\Square.hack',
             ]
 
         for _bin_filepath in _bin_filepaths:
-            with open(_bin_filepath) as _asm_file:
-                program = _asm_file.readlines()
+            if os.path.exists(_bin_filepath):
+                with open(_bin_filepath) as _asm_file:
+                    program = _asm_file.readlines()
+            else:
+                print("%s %s: ROM not found" % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
+                continue
 
             computer = Computer(name="computer_main", debug=debug)
             print("%s %s: Loading ROM" % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
-            computer.flash_rom(program)
-            print("%s %s: Running program" % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
 
+            # screen for common errors before attempting to run
+            try:
+                i = 0
+                for p in program:
+                    i += 1
+                    if len(p.strip()) != 16:
+                        raise RuntimeError("%s: bit count error found in instruction pre-scan line %s"
+                                           % (_bin_filepath, i))
+                    if i > 32000:
+                        raise RuntimeError("%s: ROM32K allocation exhausted" % _bin_filepath)
+
+                # load the program
+                computer.flash_rom(program)
+
+            except RuntimeError:
+                print("%s %s: Terminating program due to error"
+                      % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
+                traceback.print_exc()
+                continue
+
+            print("%s %s: Running program" % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
             for command in program:
-                try:
-                    computer.evaluate()
-                except RuntimeError:
-                    traceback.print_exc()
-                    print("%s %s: Terminating program due to error"
-                          % (datetime.now().strftime("%H:%M:%S"), _bin_filepath))
-                    break
+                computer.evaluate()
 
 
 if __name__ == "__main__":
@@ -2928,11 +2946,11 @@ if __name__ == "__main__":
     print("%s UNIT_TESTS: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
 
     # run basic debug HACK program (~5 seconds)
-    print("%s COMPUTER_DEBUG: Initializing" % datetime.now().strftime("%H:%M:%S"))
+    print("%s HACK_DEBUG: Initializing" % datetime.now().strftime("%H:%M:%S"))
     main(unit_test=False, debug=True)
-    print("%s COMPUTER_DEBUG: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
+    print("%s HACK_DEBUG: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
 
-    # run all listed HACK programs (varies, ~5 mins for project 4-8)
-    print("%s COMPUTER_ALL: Initializing" % datetime.now().strftime("%H:%M:%S"))
+    # run all listed HACK programs (varies, ~5 mins for project 4-8 sans pong)
+    print("%s HACK: Initializing" % datetime.now().strftime("%H:%M:%S"))
     main(unit_test=False, debug=False)
-    print("%s COMPUTER_ALL: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
+    print("%s HACK: Complete!\n" % datetime.now().strftime("%H:%M:%S"))
