@@ -4,6 +4,8 @@ NAND is a primitive implemented at the hardware level so need to define the logi
 All subsequent gates can be expressed via increasingly complex abstractions of NAND
 """
 
+# TODO: reduce multiple instantiations of classes where not required
+
 
 class Gate(object):
     def __init__(self):
@@ -756,33 +758,60 @@ class ALU(Gate):
         return result, self.zr, self.ng
 
 
+class DFF(Gate):
+    """
+    1 bit register, store new value if load else emit previous value
+    // No HDL, implemented in Java on the course
+    """
+    def __init__(self):
+        super().__init__()
+        self.r_nor = "0b0"  # Q = in if load
+        self.s_nor = "0b1"  # !Q
+
+    def calculate(self):
+        # reset=(in=0 & load=1)
+        load1 = AndGate().evaluate(a=self.load, b="0b1")
+        in0 = NorGate().evaluate(a=self._in, b="0b0")
+        reset = AndGate().evaluate(a=load1, b=in0)
+
+        s_and = AndGate().evaluate(a=self._in, b=self.load)
+        r_and = AndGate().evaluate(a=self.load, b=reset)
+        self.s_nor = NorGate().evaluate(a=s_and, b=self.r_nor)
+        self.r_nor = NorGate().evaluate(a=self.s_nor, b=r_and)
+
+        # print("S: %s" % s_and, "R: %s" % r_and, "--", "Q: %s" % self.r_nor, "!Q: %s" % self.s_nor)
+        if self.r_nor == "0b1" and self.s_nor == "0b1":
+            raise RuntimeError("DFF failed, r_nor/s_nor cannot both be 0b1: %s %s" % (self.r_nor, self.s_nor))
+        return self.r_nor, self.s_nor
+
+
 class Bit(Gate):
     """
-    1 bit register, if load emit in else dff (previous value)
-    // If load[t] == 1 then out[t+1] = in[t] else out does not change (out[t+1] = out[t])
+    1 bit register, if load emit in else previous value
 
     CHIP Bit {
         IN in, load;
         OUT out;
 
-        PARTS:
+    PARTS:
         Mux(a=Dout,b=in,sel=load,out=Mout);
         DFF(in=Mout,out=Dout,out=out);
     }
     """
     def __init__(self):
         super().__init__()
-        self.dff = "0b0"  # DFF not implemented (primitive)
+        self.dff = DFF()
+        self.d_out = "0b0"
 
     def calculate(self):
-        self.dff = Mux().evaluate(a=self.dff, b=self._in, sel=self.load)
-        return self.dff
+        m_out = Mux().evaluate(a=self.d_out, b=self._in, sel=self.load)
+        self.d_out = self.dff.evaluate(_in=m_out, load=self.load)[0]
+        return self.d_out
 
 
 class Register(Gate):
     """
-    16 bit register, if load emit in else dff (previous value)
-    // If load[t] == 1 then out[t+1] = in[t] else out does not change
+    16 bit register, if load emit in else previous value
 
     CHIP Register {
         IN in[16], load;
@@ -809,13 +838,45 @@ class Register(Gate):
     """
     def __init__(self):
         super().__init__()
-        self.dff = "0b0"  # DFF not implemented (primitive)
+        self.bit0 = Bit()
+        self.bit1 = Bit()
+        self.bit2 = Bit()
+        self.bit3 = Bit()
+        self.bit4 = Bit()
+        self.bit5 = Bit()
+        self.bit6 = Bit()
+        self.bit7 = Bit()
+        self.bit8 = Bit()
+        self.bit9 = Bit()
+        self.bit10 = Bit()
+        self.bit11 = Bit()
+        self.bit12 = Bit()
+        self.bit13 = Bit()
+        self.bit14 = Bit()
+        self.bit15 = Bit()
 
     def calculate(self):
-        byte_str = "0b"
-        for i in reversed(range(1, 17)):
-            byte_str += Bit().evaluate(_in="0b"+self._in16[i*-1], load=self.load)[2:]
-        return byte_str
+        # can't use range as Register has to save state
+        bit0 = self.bit0.evaluate(_in="0b"+self._in16[2], load=self.load)
+        bit1 = self.bit1.evaluate(_in="0b"+self._in16[3], load=self.load)
+        bit2 = self.bit2.evaluate(_in="0b"+self._in16[4], load=self.load)
+        bit3 = self.bit3.evaluate(_in="0b"+self._in16[5], load=self.load)
+        bit4 = self.bit4.evaluate(_in="0b"+self._in16[6], load=self.load)
+        bit5 = self.bit5.evaluate(_in="0b"+self._in16[7], load=self.load)
+        bit6 = self.bit6.evaluate(_in="0b"+self._in16[8], load=self.load)
+        bit7 = self.bit7.evaluate(_in="0b"+self._in16[9], load=self.load)
+        bit8 = self.bit8.evaluate(_in="0b"+self._in16[10], load=self.load)
+        bit9 = self.bit9.evaluate(_in="0b"+self._in16[11], load=self.load)
+        bit10 = self.bit10.evaluate(_in="0b"+self._in16[12], load=self.load)
+        bit11 = self.bit11.evaluate(_in="0b"+self._in16[13], load=self.load)
+        bit12 = self.bit12.evaluate(_in="0b"+self._in16[14], load=self.load)
+        bit13 = self.bit13.evaluate(_in="0b"+self._in16[15], load=self.load)
+        bit14 = self.bit14.evaluate(_in="0b"+self._in16[16], load=self.load)
+        bit15 = self.bit15.evaluate(_in="0b"+self._in16[17], load=self.load)
+
+        return "0b" + bit0[2:] + bit1[2:] + bit2[2:] + bit3[2:] + bit4[2:] + bit5[2:] \
+               + bit6[2:] + bit7[2:] + bit8[2:] + bit9[2:] + bit10[2:] + bit11[2:] \
+               + bit12[2:] + bit13[2:] + bit14[2:] + bit15[2:]
 
 
 class PC(Gate):
@@ -850,6 +911,54 @@ class PC(Gate):
         mux16_cout = Mux16().evaluate(a16=mux16_w1, b16="0b0000000000000000", sel=self.reset)
         self.feedback = Register().evaluate(_in16=mux16_cout, load="0b1")
         return self.feedback
+
+
+class RAM8(Gate):
+    """
+    Memory of 8 registers, each 16 bit-wide. 
+    Out holds the value stored at the memory location specified by address.
+    If load==1, then the in value is loaded into the memory location specified by address
+    
+    CHIP RAM8 {
+        IN in[16], load, address[3];
+        OUT out[16];
+    
+    PARTS:
+        DMux8Way(in=load, sel=address, a=r0, b=r1, c=r2, d=r3, e=r4, f=r5, g=r6, h=r7);
+        Register(in=in, load=r0, out=r0Out);
+        Register(in=in, load=r1, out=r1Out);
+        Register(in=in, load=r2, out=r2Out);
+        Register(in=in, load=r3, out=r3Out);
+        Register(in=in, load=r4, out=r4Out);
+        Register(in=in, load=r5, out=r5Out);
+        Register(in=in, load=r6, out=r6Out);
+        Register(in=in, load=r7, out=r7Out);
+        Mux8Way16(a=r0Out, b=r1Out, c=r2Out, d=r3Out, e=r4Out, f=r5Out, g=r6Out, h=r7Out, sel=address, out=out);
+    }
+    """
+    def __init__(self):
+        super().__init__()
+        self.r0 = Register()
+        self.r1 = Register()
+        self.r2 = Register()
+        self.r3 = Register()
+        self.r4 = Register()
+        self.r5 = Register()
+        self.r6 = Register()
+        self.r7 = Register()
+
+    def calculate(self):
+        dmux8w = DMux8Way().evaluate(_in=self.load, sel3=self.addr3)
+        r0 = self.r0.evaluate(_in16=self._in16, load=dmux8w[0])
+        r1 = self.r1.evaluate(_in16=self._in16, load=dmux8w[1])
+        r2 = self.r2.evaluate(_in16=self._in16, load=dmux8w[2])
+        r3 = self.r3.evaluate(_in16=self._in16, load=dmux8w[3])
+        r4 = self.r4.evaluate(_in16=self._in16, load=dmux8w[4])
+        r5 = self.r5.evaluate(_in16=self._in16, load=dmux8w[5])
+        r6 = self.r6.evaluate(_in16=self._in16, load=dmux8w[6])
+        r7 = self.r7.evaluate(_in16=self._in16, load=dmux8w[7])
+        print("class", r0, r1, r2, r3, r4, r5, r6, r7)
+        return Mux8Way16().evaluate(a16=r0, b16=r1, c16=r2, d16=r3, e16=r4, f16=r5, g16=r6, h16=r7, sel3=self.addr3)
 
 
 def input_unit_test():
@@ -936,6 +1045,9 @@ def main():
     _bit = Bit()
     _register = Register()
     _pc = PC()
+    _ram8 = RAM8()
+    _dff = DFF()
+
     input_unit_test()
 
     # For two 1 inputs return a 1 output, else return a 1 output
@@ -1130,14 +1242,25 @@ def main():
     assert _alu.evaluate(x="0b1111111111111111", y="0b0000000000000000", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b1111111111111111", "0b0", "0b1")
     assert _alu.evaluate(x="0b1111111111111111", y="0b1111111111111111", zx="0b0", zy="0b0", nx="0b0", ny="0b0", f="0b0", no="0b1") == ("0b0000000000000000", "0b1", "0b0")
 
-    # 1 bit register, if load emit in else dff (previous value)
+    # DFF
+    assert _dff.evaluate(_in="0b0", load="0b0") == ("0b0", "0b1")  # Q=0 (initial)
+
+    assert _dff.evaluate(_in="0b1", load="0b1") == ("0b1", "0b0")  # Q=1 (set 1)
+    assert _dff.evaluate(_in="0b1", load="0b0") == ("0b1", "0b0")  # Q=1 (no change)
+    assert _dff.evaluate(_in="0b0", load="0b0") == ("0b1", "0b0")  # Q=1 (no change)
+
+    assert _dff.evaluate(_in="0b0", load="0b1") == ("0b0", "0b0")  # Q=0 (set 0 / reset)
+    assert _dff.evaluate(_in="0b1", load="0b0") == ("0b0", "0b1")  # Q=1 (no change)
+    assert _dff.evaluate(_in="0b0", load="0b0") == ("0b0", "0b1")  # Q=1 (no change)
+
+    # # 1 bit register, if load emit in else previous value
     assert _bit.evaluate(_in="0b0", load="0b0") == "0b0"
     assert _bit.evaluate(_in="0b0", load="0b1") == "0b0"
     assert _bit.evaluate(_in="0b1", load="0b0") == "0b0"
     assert _bit.evaluate(_in="0b1", load="0b1") == "0b1"
     assert _bit.evaluate(_in="0b0", load="0b0") == "0b1"
 
-    # 16-bit register, if load emit in else dff (previous value)
+    # # 16-bit register, if load emit in else previous value
     assert _register.evaluate(_in16="0b0000000000000000", load="0b0") == "0b0000000000000000"
     assert _register.evaluate(_in16="0b0000000000000000", load="0b1") == "0b0000000000000000"
     assert _register.evaluate(_in16="0b1111111111111111", load="0b0") == "0b0000000000000000"
@@ -1145,22 +1268,27 @@ def main():
     assert _register.evaluate(_in16="0b0000000000000001", load="0b1") == "0b0000000000000001"
     assert _register.evaluate(_in16="0b1000000000000000", load="0b1") == "0b1000000000000000"
 
-    # assert _register.evaluate(_in16="0b0000000000000000", load="0b0") == "0b1000000000000000"  # FIXME
-
-    # PC: load (inc=0, reset=0)
+    # # PC: load (inc=0, reset=0)
     assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
     assert _pc.evaluate(_in16="0b1111111111111111", load="0b0", inc="0b0", reset="0b0") == "0b0000000000000000"
     assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b0", reset="0b0") == "0b1111111111111111"
     assert _pc.evaluate(_in16="0b0000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000000"
+    assert _pc.evaluate(_in16="0b1000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b1000000000000000"
+    assert _pc.evaluate(_in16="0b0000000000000001", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000001"
 
-    # PC: inc/reset (load=0)
-    assert _pc.evaluate(_in16="0b0000000000000000", load="0b1", inc="0b0", reset="0b0") == "0b0000000000000000"  # load
-    assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b1", reset="0b0") == "0b0000000000000001"
+    # PC: inc/reset
+    assert _pc.evaluate(_in16="0b0000000000000000", load="0b0", inc="0b1", reset="0b0") == "0b0000000000000010"
     assert _pc.evaluate(_in16="0b1111111111111111", load="0b0", inc="0b0", reset="0b1") == "0b0000000000000000"
 
     # PC: reset>load>inc
     assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b1", reset="0b1") == "0b0000000000000000"
-    assert _pc.evaluate(_in16="0b1111111111111111", load="0b1", inc="0b1", reset="0b0") == "0b1111111111111111"
+    assert _pc.evaluate(_in16="0b0000000000000100", load="0b1", inc="0b1", reset="0b0") == "0b0000000000000100"
+
+    # Memory of 8 registers, each 16 bit-wide
+    assert _ram8.evaluate(_in16="0b0000000000000001", load="0b1", addr3="0b000") == "0b0000000000000001"
+    assert _ram8.evaluate(_in16="0b1000000000000000", load="0b1", addr3="0b111") == "0b1000000000000000"
+    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b000") == "0b0000000000000001"
+    assert _ram8.evaluate(_in16="0b0000000000000000", load="0b0", addr3="0b111") == "0b1000000000000000"
 
 
 if __name__ == "__main__":
