@@ -16,6 +16,7 @@ class Gate(object):
         # Gates values should only be initialized at runtime
         self.a = None
         self.b = None
+        self.c = None
         self.a16 = None
         self.b16 = None
         self.c16 = None
@@ -30,8 +31,8 @@ class Gate(object):
         self._in = None
         self._in8 = None
 
-    def evaluate(self, a=None, b=None, _in=None, sel=None, sel2=None, sel3=None, _in8=None, _in16=None, a16=None, 
-                 b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None):
+    def evaluate(self, a=None, b=None, c=None, _in=None, sel=None, sel2=None, sel3=None, _in8=None, _in16=None,
+                 a16=None, b16=None, c16=None, d16=None, e16=None, f16=None, g16=None, h16=None):
         """
         validate input, None = uninitialized
         """
@@ -49,6 +50,13 @@ class Gate(object):
             if b not in ("0b0", "0b1"):
                 raise RuntimeError("b input must be 1 bit")
             self.b = b
+
+        if c is not None:
+            if type(c) is not str:
+                c = bin(c)
+            if c not in ("0b0", "0b1"):
+                raise RuntimeError("c input must be 1 bit")
+            self.c = c
 
         if sel is not None:
             if type(sel) is not str:
@@ -371,6 +379,36 @@ class DMux8Way(DMux):
         return dmux4_0 + dmux4_1
 
 
+class HalfAdder(Gate):
+    """
+    Computes the sum of 2 x 1 bit inputs, output carry bit & sum bit
+    """
+    def calculate(self):
+        carry = AndGate().evaluate(a=self.a, b=self.b)
+        _sum = XorGate().evaluate(a=self.a, b=self.b)
+        return carry, _sum
+
+
+class FullAdder(Gate):
+    """
+    Computes the sum of 3 x 1 bit inputs, output carry bit & sum bit
+        IN a, b, c;  // 1-bit inputs
+    OUT sum,     // Right bit of a + b + c
+        carry;   // Left bit of a + b + c
+
+    PARTS:
+    HalfAdder(a=a, b=b, sum=sumAB, carry=carryAB);
+    HalfAdder(a=c, b=sumAB, sum=sum, carry=carryABC);
+    Or(a=carryABC, b=carryAB, out=carry);
+
+    """
+    def calculate(self):
+        carry_ab, sum_ab = HalfAdder().evaluate(a=self.a, b=self.b)
+        carry_abc, _sum = HalfAdder().evaluate(a=self.c, b=sum_ab)
+        carry = OrGate().evaluate(a=carry_abc, b=carry_ab)
+        return carry, _sum
+
+
 def input_unit_test():
     """
     Test input sizes: catch RuntimeException(s)
@@ -429,7 +467,9 @@ def main():
     _dmux = DMux()
     _dmux4way = DMux4Way()
     _dmux8way = DMux8Way()
-    
+    _halfAdder = HalfAdder()
+    _fullAdder = FullAdder()
+
     input_unit_test()
 
     # For two 1 inputs return a 1 output, else return a 1 output
@@ -555,6 +595,22 @@ def main():
     assert _dmux8way.evaluate(_in="0b1", sel3="0b101") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b1", "0b0", "0b0")
     assert _dmux8way.evaluate(_in="0b1", sel3="0b110") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b1", "0b0")
     assert _dmux8way.evaluate(_in="0b1", sel3="0b111") == ("0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b0", "0b1")
+
+    # Computes the sum of 2 x 1 bit inputs, output carry bit & sum bit
+    assert _halfAdder.evaluate(a="0b0", b="0b0") == ("0b0", "0b0")
+    assert _halfAdder.evaluate(a="0b0", b="0b1") == ("0b0", "0b1")
+    assert _halfAdder.evaluate(a="0b1", b="0b0") == ("0b0", "0b1")
+    assert _halfAdder.evaluate(a="0b1", b="0b1") == ("0b1", "0b0")
+
+    # Computes the sum of 3 x 1 bit inputs, output carry bit & sum bit
+    assert _fullAdder.evaluate(a="0b0", b="0b0", c="0b0") == ("0b0", "0b0")
+    assert _fullAdder.evaluate(a="0b1", b="0b1", c="0b1") == ("0b1", "0b1")
+    assert _fullAdder.evaluate(a="0b1", b="0b0", c="0b0") == ("0b0", "0b1")
+    assert _fullAdder.evaluate(a="0b0", b="0b1", c="0b0") == ("0b0", "0b1")
+    assert _fullAdder.evaluate(a="0b0", b="0b0", c="0b1") == ("0b0", "0b1")
+    assert _fullAdder.evaluate(a="0b0", b="0b1", c="0b1") == ("0b1", "0b0")
+    assert _fullAdder.evaluate(a="0b1", b="0b0", c="0b1") == ("0b1", "0b0")
+    assert _fullAdder.evaluate(a="0b1", b="0b1", c="0b0") == ("0b1", "0b0")
 
 
 if __name__ == "__main__":
