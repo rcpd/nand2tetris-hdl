@@ -1424,7 +1424,7 @@ def main():
     _ram16k = RAM16K(watermark="ram16k_assert")
 
     input_unit_test()
-    '''
+
     # For two 1 inputs return a 1 output, else return a 1 output
     assert _nand.evaluate(a="0b1", b="0b1") == "0b0"
     assert _nand.evaluate(a="0b1", b="0b0") == "0b1"
@@ -1734,25 +1734,126 @@ def main():
     assert _ram64.evaluate(_in16="0b1010000000000000", load="0b0", addr6="0b111101") == "0b1010000000000000"
     assert _ram64.evaluate(_in16="0b1110000000000000", load="0b0", addr6="0b111110") == "0b1110000000000000"
     assert _ram64.evaluate(_in16="0b1111000000000000", load="0b0", addr6="0b111111") == "0b1111000000000000"
-    '''
 
-    # Memory of 512 registers, each 16 bit-wide # TODO: more tests
-    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b000000000") == "0b0000000000000001"
-    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b111000000") == "0b1000000000000000"
-    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b000000000") == "0b0000000000000001"
-    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b111000000") == "0b1000000000000000"
-    
-    # Memory of 4k registers, each 16 bit-wide # TODO: more tests
-    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b000000000000") == "0b0000000000000001"
-    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b111000000000") == "0b1000000000000000"
-    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b000000000000") == "0b0000000000000001"
-    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b111000000000") == "0b1000000000000000"
+    # RAM512: sequential set (000/XXX)
+    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b1", addr9="0b000000000") == "0b0000000000000000"
+    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b000000001") == "0b0000000000000001"
+    assert _ram512.evaluate(_in16="0b0000000000000010", load="0b1", addr9="0b000000010") == "0b0000000000000010"
+    assert _ram512.evaluate(_in16="0b0000000000000011", load="0b1", addr9="0b000000111") == "0b0000000000000011"
+    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b000001100") == "0b1000000000000000"
+    assert _ram512.evaluate(_in16="0b1010000000000000", load="0b1", addr9="0b000011101") == "0b1010000000000000"
+    assert _ram512.evaluate(_in16="0b1110000000000000", load="0b1", addr9="0b000111110") == "0b1110000000000000"
+    assert _ram512.evaluate(_in16="0b1111000000000000", load="0b1", addr9="0b001111111") == "0b1111000000000000"
 
-    # Memory of 16k registers, each 16 bit-wide # TODO: more tests
-    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b00000000000000") == "0b0000000000000001"
-    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b11100000000000") == "0b1000000000000000"
-    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b00000000000000") == "0b0000000000000001"
-    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b11100000000000") == "0b1000000000000000"
+    # RAM512: sequential set (111/XXX)
+    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b1", addr9="0b111111000") == "0b0000000000000000"
+    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b1", addr9="0b111110001") == "0b0000000000000001"
+    assert _ram512.evaluate(_in16="0b0000000000000010", load="0b1", addr9="0b111100010") == "0b0000000000000010"
+    assert _ram512.evaluate(_in16="0b0000000000000011", load="0b1", addr9="0b111000011") == "0b0000000000000011"
+    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b1", addr9="0b110000000") == "0b1000000000000000"
+    assert _ram512.evaluate(_in16="0b1010000000000000", load="0b1", addr9="0b111111101") == "0b1010000000000000"
+    assert _ram512.evaluate(_in16="0b1110000000000000", load="0b1", addr9="0b111111110") == "0b1110000000000000"
+    assert _ram512.evaluate(_in16="0b1111000000000000", load="0b1", addr9="0b111111111") == "0b1111000000000000"
+
+    # RAM512: sequential load (000/XXX)
+    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b000000000") == "0b0000000000000000"
+    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b0", addr9="0b000000001") == "0b0000000000000001"
+    assert _ram512.evaluate(_in16="0b0000000000000010", load="0b0", addr9="0b000000010") == "0b0000000000000010"
+    assert _ram512.evaluate(_in16="0b0000000000000011", load="0b0", addr9="0b000000111") == "0b0000000000000011"
+    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b0", addr9="0b000001100") == "0b1000000000000000"
+    assert _ram512.evaluate(_in16="0b1010000000000000", load="0b0", addr9="0b000011101") == "0b1010000000000000"
+    assert _ram512.evaluate(_in16="0b1110000000000000", load="0b0", addr9="0b000111110") == "0b1110000000000000"
+    assert _ram512.evaluate(_in16="0b1111000000000000", load="0b0", addr9="0b001111111") == "0b1111000000000000"
+
+    # RAM512: sequential load (111/XXX)
+    assert _ram512.evaluate(_in16="0b0000000000000000", load="0b0", addr9="0b111111000") == "0b0000000000000000"
+    assert _ram512.evaluate(_in16="0b0000000000000001", load="0b0", addr9="0b111110001") == "0b0000000000000001"
+    assert _ram512.evaluate(_in16="0b0000000000000010", load="0b0", addr9="0b111100010") == "0b0000000000000010"
+    assert _ram512.evaluate(_in16="0b0000000000000011", load="0b0", addr9="0b111000011") == "0b0000000000000011"
+    assert _ram512.evaluate(_in16="0b1000000000000000", load="0b0", addr9="0b110000000") == "0b1000000000000000"
+    assert _ram512.evaluate(_in16="0b1010000000000000", load="0b0", addr9="0b111111101") == "0b1010000000000000"
+    assert _ram512.evaluate(_in16="0b1110000000000000", load="0b0", addr9="0b111111110") == "0b1110000000000000"
+    assert _ram512.evaluate(_in16="0b1111000000000000", load="0b0", addr9="0b111111111") == "0b1111000000000000"
+
+    # RAM4K: sequential set (000/XXX)
+    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b1", addr12="0b000000000000") == "0b0000000000000000"
+    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b000000000001") == "0b0000000000000001"
+    assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b1", addr12="0b000000000010") == "0b0000000000000010"
+    assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b1", addr12="0b000000000111") == "0b0000000000000011"
+    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b000000001100") == "0b1000000000000000"
+    assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b1", addr12="0b000000011101") == "0b1010000000000000"
+    assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b1", addr12="0b000001111110") == "0b1110000000000000"
+    assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b1", addr12="0b000011111111") == "0b1111000000000000"
+
+    # RAM4K: sequential set (111/XXX)
+    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b1", addr12="0b111111111000") == "0b0000000000000000"
+    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b1", addr12="0b111111110001") == "0b0000000000000001"
+    assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b1", addr12="0b111111100010") == "0b0000000000000010"
+    assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b1", addr12="0b111111000011") == "0b0000000000000011"
+    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b1", addr12="0b111110000000") == "0b1000000000000000"
+    assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b1", addr12="0b111111111101") == "0b1010000000000000"
+    assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b1", addr12="0b111111111110") == "0b1110000000000000"
+    assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b1", addr12="0b111111111111") == "0b1111000000000000"
+
+    # RAM4K: sequential load (000/XXX)
+    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b000000000000") == "0b0000000000000000"
+    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b0", addr12="0b000000000001") == "0b0000000000000001"
+    assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b0", addr12="0b000000000010") == "0b0000000000000010"
+    assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b0", addr12="0b000000000111") == "0b0000000000000011"
+    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b0", addr12="0b000000001100") == "0b1000000000000000"
+    assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b0", addr12="0b000000011101") == "0b1010000000000000"
+    assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b0", addr12="0b000001111110") == "0b1110000000000000"
+    assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b0", addr12="0b000011111111") == "0b1111000000000000"
+
+    # RAM4K: sequential load (111/XXX)
+    assert _ram4k.evaluate(_in16="0b0000000000000000", load="0b0", addr12="0b111111111000") == "0b0000000000000000"
+    assert _ram4k.evaluate(_in16="0b0000000000000001", load="0b0", addr12="0b111111110001") == "0b0000000000000001"
+    assert _ram4k.evaluate(_in16="0b0000000000000010", load="0b0", addr12="0b111111100010") == "0b0000000000000010"
+    assert _ram4k.evaluate(_in16="0b0000000000000011", load="0b0", addr12="0b111111000011") == "0b0000000000000011"
+    assert _ram4k.evaluate(_in16="0b1000000000000000", load="0b0", addr12="0b111110000000") == "0b1000000000000000"
+    assert _ram4k.evaluate(_in16="0b1010000000000000", load="0b0", addr12="0b111111111101") == "0b1010000000000000"
+    assert _ram4k.evaluate(_in16="0b1110000000000000", load="0b0", addr12="0b111111111110") == "0b1110000000000000"
+    assert _ram4k.evaluate(_in16="0b1111000000000000", load="0b0", addr12="0b111111111111") == "0b1111000000000000"
+
+    # RAM16K: sequential set (000/XXX)
+    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b1", addr14="0b00000000000000") == "0b0000000000000000"
+    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b00000000000001") == "0b0000000000000001"
+    assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b1", addr14="0b00000000000010") == "0b0000000000000010"
+    assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b1", addr14="0b00000000000111") == "0b0000000000000011"
+    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b00000000001100") == "0b1000000000000000"
+    assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b1", addr14="0b00000000011101") == "0b1010000000000000"
+    assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b1", addr14="0b00000001111110") == "0b1110000000000000"
+    assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b1", addr14="0b00000011111111") == "0b1111000000000000"
+
+    # RAM16K: sequential set (111/XXX)
+    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b1", addr14="0b11111111111000") == "0b0000000000000000"
+    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b1", addr14="0b11111111110001") == "0b0000000000000001"
+    assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b1", addr14="0b11111111100010") == "0b0000000000000010"
+    assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b1", addr14="0b11111111000011") == "0b0000000000000011"
+    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b1", addr14="0b11111110000000") == "0b1000000000000000"
+    assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b1", addr14="0b11111111111101") == "0b1010000000000000"
+    assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b1", addr14="0b11111111111110") == "0b1110000000000000"
+    assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b1", addr14="0b11111111111111") == "0b1111000000000000"
+
+    # RAM16K: sequential load (000/XXX)
+    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b00000000000000") == "0b0000000000000000"
+    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b0", addr14="0b00000000000001") == "0b0000000000000001"
+    assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b0", addr14="0b00000000000010") == "0b0000000000000010"
+    assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b0", addr14="0b00000000000111") == "0b0000000000000011"
+    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b0", addr14="0b00000000001100") == "0b1000000000000000"
+    assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b0", addr14="0b00000000011101") == "0b1010000000000000"
+    assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b0", addr14="0b00000001111110") == "0b1110000000000000"
+    assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b0", addr14="0b00000011111111") == "0b1111000000000000"
+
+    # RAM16K: sequential load (111/XXX)
+    assert _ram16k.evaluate(_in16="0b0000000000000000", load="0b0", addr14="0b11111111111000") == "0b0000000000000000"
+    assert _ram16k.evaluate(_in16="0b0000000000000001", load="0b0", addr14="0b11111111110001") == "0b0000000000000001"
+    assert _ram16k.evaluate(_in16="0b0000000000000010", load="0b0", addr14="0b11111111100010") == "0b0000000000000010"
+    assert _ram16k.evaluate(_in16="0b0000000000000011", load="0b0", addr14="0b11111111000011") == "0b0000000000000011"
+    assert _ram16k.evaluate(_in16="0b1000000000000000", load="0b0", addr14="0b11111110000000") == "0b1000000000000000"
+    assert _ram16k.evaluate(_in16="0b1010000000000000", load="0b0", addr14="0b11111111111101") == "0b1010000000000000"
+    assert _ram16k.evaluate(_in16="0b1110000000000000", load="0b0", addr14="0b11111111111110") == "0b1110000000000000"
+    assert _ram16k.evaluate(_in16="0b1111000000000000", load="0b0", addr14="0b11111111111111") == "0b1111000000000000"
 
 
 if __name__ == "__main__":
